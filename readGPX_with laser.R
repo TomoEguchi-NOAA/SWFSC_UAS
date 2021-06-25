@@ -1,7 +1,7 @@
 
 library(XML)
 
-FILE <- "data/210617/21061700.gpx"
+FILE <- "data/210617/21061700.GPX"
 doc <- xmlParse(FILE, useInternalNodes=TRUE)
 
 ele <- as.numeric(xpathSApply(doc, path='//trkpt/ele', xmlValue))
