@@ -4,6 +4,7 @@ rm(list=ls())
 library(XML)
 library(gsubfn)
 library(lattice)
+library(lubridate)
 
 data.dir <- "data/210617/"
 
@@ -38,19 +39,25 @@ lon <- as.numeric(coords['lon',])
 
 #df <- data.frame(time, lat, lon, laser, alt, ele, ele.raw)
 #head(df)
+time2 <- sub("T", " ", time)
+time3 <- sub("Z", "", time2)
+# the following (OS1) preserves decimal seconds, although they are not printed
+time4 <- as_datetime(strftime(time3, format = "%Y-%m-%d %H:%M:%OS1", tz="GMT")) 
 
-time<-unlist(strsplit(time, "Z")) #remove the Z after the time
-time<-unlist(strsplit(time, "T", fixed=TRUE)) # split the string into date and time by removing the T
-n.records<-length(time)
-date.col<-time[seq(from=1, by=2, to=n.records)] #pull out the date (odd numbered records)
-time.col<-time[seq(from=2, by=2, to=n.records)] #pull out the times (even numbered records)
-time<-paste(date.col, time.col, sep=" ") # paste them back together as a character vector
-time<-strptime(time, format="%Y-%m-%d %H:%M:%S", tz="GMT") # convert the character vector to a timedate object
+# time<-unlist(strsplit(time, "Z")) #remove the Z after the time
+# time<-unlist(strsplit(time, "T", fixed=TRUE)) # split the string into date and time by removing the T
+n.records<-length(time4)
+# date.col<-time[seq(from=1, by=2, to=n.records)] #pull out the date (odd numbered records)
+# time.col<-time[seq(from=2, by=2, to=n.records)] #pull out the times (even numbered records)
+# time<-paste(date.col, time.col, sep=" ") # paste them back together as a character vector
+# time<-strptime(time, format="%Y-%m-%d %H:%M:%S", tz="GMT") # convert the character vector to a timedate object
 
-
-interval<-diff(time)
-flight.time<-difftime(max(time),min(time), units="secs") 
-run.time<-difftime(time,min(time), units="secs") 
+interval<-diff(time4)
+#interval <- lubridate::interval(time4)
+#flight.time<-difftime(max(time),min(time), units="secs") 
+#run.time<-difftime(time,min(time), units="secs") 
+flight.time <- as.numeric(difftime(max(time4),  min(time4), units = "sec"))
+run.time <- time4 - rep(min(time4), length(time4))
 
 plot(laser~run.time, xlab="Time (s)", ylab="Altitude (m)", type="l", col=1)
 lines(ele~run.time, col="red")
@@ -79,15 +86,15 @@ if(is.na(dist.from.start[1])){
   print(paste("THE FIRST ", x.dist, " RECORD(S) REMOVED DUE TO ERROR IN COMPUTING MOVEMENT WHILE STATIONARY AFTER MOTOR START"))
   x.rm <- seq(from=1, by=1, to = x.dist)
   dist.from.start <- dist.from.start[-x.rm]
-  max.elevation<-max(ele[-x.rm])
-  rise<-diff(ele[-x.rm])
-  run<-diff(dist.from.start)
-  displacement<-sqrt(run^2+rise^2) # x-y-z movement between recording intervals
-  total.displacement<-cumsum(displacement) # total displacement during flight
-  max.displacement<-max(displacement)
+  max.elevation <- max(ele[-x.rm])
+  rise <- diff(ele[-x.rm])
+  run <- diff(dist.from.start)
+  displacement <- sqrt(run^2 + rise^2) # x-y-z movement between recording intervals
+  total.displacement <- cumsum(displacement) # total displacement during flight
+  max.displacement <- max(displacement)
   mst<-as.numeric(interval[displacement==max.displacement])
   max.speed<-unique(max.displacement/mst)
-  distance<-sqrt(dist.from.start^2 + Ele[-x.rm]^2)
+  distance<-sqrt(dist.from.start^2 + ele[-x.rm]^2)
   max.distance<-max(distance)
   mean.speed<-max(total.displacement)/as.numeric(Flight.time)
 } else {
@@ -97,7 +104,7 @@ if(is.na(dist.from.start[1])){
   displacement<-sqrt(run^2+rise^2) # x-y-z movement between recording intervals
   total.displacement<-cumsum(displacement) # total displacement during flight
   max.displacement<-max(displacement)
-  mst<-as.numeric(interval[displacement==max.displacement])
+  mst <- as.numeric(interval[displacement == max.displacement])
   max.speed<-unique(max.displacement/mst)
   distance<-sqrt(dist.from.start[-1]^2+ele[-1]^2)   # TE added [-1] to ele 2021-06-24
   max.distance<-max(distance)
@@ -105,17 +112,23 @@ if(is.na(dist.from.start[1])){
 }
 
 
-time = as.character(time)
-out<-c(min(time), max(time), round(lat[1],3), 
-       round(lon[1],3), round(flight.time,2), 
-       round(max.elevation,2), round(max.distance,2), 
-       round(max(total.displacement),2), 
-       round(max.speed,2), round(mean.speed, 2))
+#time <- as.character(time)
+out.df <-data.frame("Start_GMT" = min(time4), 
+                    "End_GMT" = max(time4), 
+                    "Start_Lat" = round(lat[1],3), 
+                    "Start_Long" = round(lon[1],3), 
+                    "Duration_s" = round(flight.time,2), 
+                    "Max_elevation_m" = round(max.elevation,2), 
+                    "Max_distance_m" = round(max.distance,2), 
+                    "Total_distance_m" = round(max(total.displacement),2), 
+                    "Max_vel_m/s" = round(max.speed,2), 
+                    "Mean_vel_m/s" = round(mean.speed, 2),
+                    check.names = F)   # this lets me use forward slashes in column names
 
-names(out)<-c("Start_GMT", "End_GMT","Start_Lat", "Start_Long", "Duration_s", "Max_elevation_m", "Max_distance_m", "Total_distance_m", "Max_vel_m/s", "Mean_vel_m/s")
+#names(out)<-c("Start_GMT", "End_GMT","Start_Lat", "Start_Long", "Duration_s", "Max_elevation_m", "Max_distance_m", "Total_distance_m", "Max_vel_m/s", "Mean_vel_m/s")
 
 naming1<-paste0(summary.dir, filename.root, "_SUMMARY.csv")
-write.csv(out, file=naming1)
+write.csv(out.df, file=naming1, row.names = F, quote = F)
 
 time <- as.character(time)
 track <- as.data.frame(cbind(time,lon,lat,laser,alt,ele,ele.raw,heading))
