@@ -7,7 +7,9 @@ library(gsubfn)
 library(lattice)
 library(lubridate)
 
-data.dir <- "Leatherback 2021/20210701/GPX"
+data.dir <- "Leatherback 2021/20210701"
+
+summary.file.root <- unlist(strsplit(data.dir, "/"))[2]
 
 fig.dir <- paste0("data/", data.dir, "/figures/")
 if (!dir.exists(fig.dir))
@@ -18,7 +20,7 @@ if (!dir.exists(summary.dir))
   dir.create(summary.dir)
 
 # the extension should be in uppercase
-all.files <- list.files(path = paste0("data/", data.dir, "/"), 
+all.files <- list.files(path = paste0("data/", data.dir, "/GPX/"), 
                         pattern = ".GPX")
 
 out <- data.frame(ID = character(),
@@ -37,12 +39,12 @@ out <- data.frame(ID = character(),
 
 #names(out)<-c("Start_GMT", "End_GMT","Start_Lat", "Start_Long", "Duration_s", "Max_elevation_m", "Max_distance_m", "Total_distance_m", "Max_vel_m/s", "Mean_vel_m/s")
 
-naming1<-paste0(summary.dir, data.dir, "_SUMMARY.csv")
+naming1<-paste0(summary.dir, summary.file.root,  "_SUMMARY.csv")
 
 k <- 1
 for (k in 1:length(all.files)){
   filename <- all.files[k] #"21061700.GPX"
-  FILE <- paste0("data/", data.dir, "/", filename)
+  FILE <- paste0("data/", data.dir, "/GPX/", filename)
   
   filename.root <- unlist(strsplit(filename, ".GPX"))
   
@@ -152,11 +154,5 @@ for (k in 1:length(all.files)){
 #time <- as.character(time)
 out.df <- as.data.frame(out)
 
-#                    check.names = F)   # this lets me use forward slashes in column names
-
-# names(out.df) <- c("ID", "Start_GMT", "End_GMT","Start_Lat", "Start_Long", "Duration_s", "Max_elevation_m", 
-#                  "Max_distance_m", "Total_distance_m", "Max_vel_m/s", "Mean_vel_m/s")
-
-naming1<-paste0(summary.dir, filename.root, "_SUMMARY.csv")
 write.csv(out.df, file=naming1, row.names = F, quote = F)
 
