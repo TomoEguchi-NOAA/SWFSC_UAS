@@ -7,7 +7,7 @@ library(gsubfn)
 library(lattice)
 library(lubridate)
 
-data.dir <- "210617"
+data.dir <- "Leatherback 2021/20210701/GPX"
 
 fig.dir <- paste0("data/", data.dir, "/figures/")
 if (!dir.exists(fig.dir))
@@ -136,7 +136,7 @@ for (k in 1:length(all.files)){
     mean.speed <- max(total.displacement)/as.numeric(flight.time)
   }
   
-  out[k,] <- c(filename.root, as.character(min(time4)), as.character(max(time4)), 
+  out[k,] <- c(paste0(filename.root, ".GPX"), as.character(min(time4)), as.character(max(time4)), 
                round(lat[1],3), round(lon[1],3),
                round(flight.time,2), round(max.elevation,2), round(max.distance,2),
                round(max(total.displacement),2), round(max.speed,2), round(mean.speed, 2))
@@ -157,6 +157,6 @@ out.df <- as.data.frame(out)
 # names(out.df) <- c("ID", "Start_GMT", "End_GMT","Start_Lat", "Start_Long", "Duration_s", "Max_elevation_m", 
 #                  "Max_distance_m", "Total_distance_m", "Max_vel_m/s", "Mean_vel_m/s")
 
-naming1<-paste0(summary.dir, data.dir, "_SUMMARY.csv")
+naming1<-paste0(summary.dir, filename.root, "_SUMMARY.csv")
 write.csv(out.df, file=naming1, row.names = F, quote = F)
 
