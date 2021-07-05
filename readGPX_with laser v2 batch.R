@@ -7,7 +7,7 @@ library(gsubfn)
 library(lattice)
 library(lubridate)
 
-data.dir <- "Leatherback 2021/20210702"
+data.dir <- "Leatherback 2021/20210705"
 
 summary.file.root <- unlist(strsplit(data.dir, "/"))[2]
 
@@ -96,7 +96,7 @@ for (k in 1:length(all.files)){
             paste0(fig.dir, filename.root, "_xyplot.jpg") , 
             res=300, height=7, width=5, units="in")
   
-  plot(cloud(laser~lon*lat, xlab="Longitude", ylab="Latitude", zlab="heading (m)", 
+  plot(cloud(laser~lon*lat, xlab="Longitude", ylab="Latitude", zlab="altitude (m)", 
              type="l", col="red", lwd=2, auto.key=TRUE, 
              default.scales=list(distance=rep(0.75,3), arrows=FALSE)))
   

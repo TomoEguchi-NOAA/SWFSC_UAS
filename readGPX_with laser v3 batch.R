@@ -9,7 +9,7 @@ library(lattice)
 library(tidyverse)
 library(ggplot2)
 
-data.dir <- "Leatherback 2021/20210701"
+data.dir <- "Leatherback 2021/20210705"
 
 summary.file.root <- unlist(strsplit(data.dir, "/"))[2]
 
