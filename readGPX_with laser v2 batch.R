@@ -7,7 +7,7 @@ library(gsubfn)
 library(lattice)
 library(lubridate)
 
-data.dir <- "Leatherback 2021/20210705"
+data.dir <- "Leatherback 2021/20210708"
 
 summary.file.root <- unlist(strsplit(data.dir, "/"))[2]
 
@@ -123,7 +123,7 @@ for (k in 1:length(all.files)){
     max.speed <- unique(max.displacement/mst)
     distance <- sqrt(dist.from.start^2 + ele[-x.rm]^2)
     max.distance <- max(distance)
-    mean.speed <- max(total.displacement)/as.numeric(Flight.time)
+    mean.speed <- max(total.displacement)/as.numeric(flight.time)
   } else {
     max.elevation <- max(ele)
     rise <- diff(ele)

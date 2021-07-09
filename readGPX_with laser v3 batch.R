@@ -8,8 +8,9 @@ library(gsubfn)
 library(lattice)
 library(tidyverse)
 library(ggplot2)
+library(lubridate)
 
-data.dir <- "Leatherback 2021/20210705"
+data.dir <- "Leatherback 2021/20210709"
 
 summary.file.root <- unlist(strsplit(data.dir, "/"))[2]
 
@@ -92,36 +93,27 @@ for (k in 1:length(all.files)){
   dist.from.start <- 6371 * 1000 * acos((sin(lat[1] * dtr) * sin(lat * dtr)) + 
                                           (cos(lat[1] * dtr) * cos(lat * dtr) * cos(lon * dtr - lon[1] * dtr)))
   
+  x.dist <- 0
   if(is.na(dist.from.start[1])){
     x <- is.nan(dist.from.start)
     x.dist <- length(dist.from.start[x])
     print(paste("THE FIRST ", x.dist, " RECORD(S) REMOVED DUE TO ERROR IN COMPUTING MOVEMENT WHILE STATIONARY AFTER MOTOR START"))
     x.rm <- seq(from=1, by=1, to = x.dist)
     dist.from.start <- dist.from.start[-x.rm]
-    max.elevation <- max(ele[-x.rm])
-    rise <- diff(ele[-x.rm])
-    run <- diff(dist.from.start)
-    displacement <- sqrt(run^2 + rise^2) # x-y-z movement between recording intervals
-    total.displacement <- cumsum(displacement) # total displacement during flight
-    max.displacement <- max(displacement)
-    mst <- as.numeric(interval[displacement==max.displacement])
-    max.speed <- unique(max.displacement/mst)
-    distance <- sqrt(dist.from.start^2 + ele[-x.rm]^2)
-    max.distance <- max(distance)
-    mean.speed <- max(total.displacement)/as.numeric(Flight.time)
-  } else {
-    max.elevation <- max(ele)
-    rise <- diff(ele)
-    run <- diff(dist.from.start)
-    displacement <- sqrt(run^2 + rise^2) # x-y-z movement between recording intervals
-    total.displacement <- cumsum(displacement) # total displacement during flight
-    max.displacement <- max(displacement)
-    mst <- as.numeric(interval[displacement == max.displacement])
-    max.speed <- unique(max.displacement/mst)
-    distance <- sqrt(dist.from.start[-1]^2+ele[-1]^2)   # TE added [-1] to ele 2021-06-24
-    max.distance <- max(distance)
-    mean.speed <- max(total.displacement)/as.numeric(flight.time)
-  }
+    ele <- ele[-x.rm]
+  } 
+    
+  max.elevation <- max(ele)
+  rise <- diff(ele)
+  run <- diff(dist.from.start)
+  displacement <- sqrt(run^2 + rise^2) # x-y-z movement between recording intervals
+  total.displacement <- cumsum(displacement) # total displacement during flight
+  max.displacement <- max(displacement)
+  mst <- as.numeric(interval[displacement == max.displacement])
+  max.speed <- unique(max.displacement/mst)
+  distance <- sqrt(dist.from.start^2+ele^2)   
+  max.distance <- max(distance)
+  mean.speed <- max(total.displacement)/as.numeric(flight.time)
   
   out[k,] <- c(paste0(filename.root, ".GPX"), as.character(min(time4)), as.character(max(time4)), 
                round(lat[1],3), round(lon[1],3),
@@ -131,6 +123,11 @@ for (k in 1:length(all.files)){
   
   time <- as.character(time)
   #readings.df <- as.data.frame(cbind(time,lon,lat,laser,alt,ele,ele.raw,heading))
+  
+  if (x.dist > 0) {
+    dist.from.start <- c(rep(NA, x.dist), dist.from.start)
+    ele <- c(rep(NA, x.dist), ele)
+  }
   
   readings.df <- data.frame(laser = laser,
                             time = time,
