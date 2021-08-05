@@ -10,7 +10,7 @@ library(tidyverse)
 library(ggplot2)
 library(lubridate)
 
-data.dir <- "Leatherback 2021/20210709"
+data.dir <- "Leatherback_2021/20210702"
 
 summary.file.root <- unlist(strsplit(data.dir, "/"))[2]
 

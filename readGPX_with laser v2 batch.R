@@ -7,7 +7,7 @@ library(gsubfn)
 library(lattice)
 library(lubridate)
 
-data.dir <- "Leatherback 2021/20210708"
+data.dir <- "Leatherback_2021/20210710"
 
 summary.file.root <- unlist(strsplit(data.dir, "/"))[2]
 
