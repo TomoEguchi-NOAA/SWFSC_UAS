@@ -1,4 +1,10 @@
 # Combines all summary files
+# This script can be used to combine all daily summary files into one. 
+# readGPX_with laser v2 batch.R should be used to create daily summary files.
+# 
+
+# Tomo Eguchi
+# 2021-08-05
 
 rm(list=ls())
 library(tidyverse)
