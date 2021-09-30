@@ -15,6 +15,7 @@ library(sf)
 library(cowplot)
 #library(tmap)  # for faceting maps
 
+save.fig <- F
 
 land.color <- "cornsilk" #'#333333'
 water.color <- "lightcyan1"
@@ -125,7 +126,8 @@ for (k in 1:length(all.dates)){
 
 p.all <- plot_grid(plotlist = plots)
 
-ggsave(filename = "figures/all_dates.png",
-       device = "png", dpi = 600)
+if (save.fig)
+  ggsave(filename = "figures/all_dates.png",
+         device = "png", dpi = 600)
 ```
 
