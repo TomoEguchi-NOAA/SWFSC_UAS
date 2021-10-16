@@ -1,21 +1,27 @@
 # Runs readGPX_with laser v2 on all .GPX files in one folder
 # This version makes plots with ggplot2 
 
-rm(list=ls())
-
-library(XML)
-library(gsubfn)
-library(lattice)
-library(tidyverse)
-library(ggplot2)
-library(lubridate)
-
-k1 <- 1
 readGPX_v3 <- function(in.dir, write.file = T, save.fig = T){
+  library(XML)
+  library(gsubfn)
+  library(lattice)
+  library(tidyverse)
+  library(ggplot2)
+  library(lubridate)
+
+  k1 <- 1
   #write.file <- T
   dirs <- list.dirs(in.dir, recursive = F)
   
+  p.altimeters <- list()
+  p.tracks <- list()
+  out.data <- list()
+  
   for (k1 in 1:length(dirs)){
+    p.altimeters.dir <- list()
+    p.tracks.dir <- list()
+    out.data.dir <- list()
+    
     data.dir <- dirs[k1]
     summary.file.root <- unlist(strsplit(data.dir, "/"))[3]
     fig.dir <- paste0(data.dir, "/figures/")
@@ -150,34 +156,38 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T){
                                 lat = lat,
                                 dist.from.start = dist.from.start)
       
-      p.altimeters <- ggplot(readings.df) + 
+      readings.df <- na.omit(readings.df)
+      
+      p.altimeters.dir[[k]] <- ggplot(readings.df) + 
         geom_path(aes(x = run.time, y = laser), color = "black") +
         geom_path(aes(x = run.time, y = ele), color = "red") +
         geom_path(aes(x = run.time, y = ele.raw), color = "yellow")
       
-      p.tracks <- ggplot(readings.df) + 
+      p.tracks.dir[[k]] <- ggplot(readings.df) + 
         geom_path(aes(x = lon, y = lat, size = ele, color = run.time)) + 
         geom_point(aes(x = lon[1], y = lat[1]), 
                    color = "red", shape = "circle") +
         geom_text(aes(x = lon[1], y = lat[1], label = "begin"),
                   color = "red")+
-        geom_point(aes(x = lon[nrow(readings.df)], y = lat[nrow(readings.df)]), 
-                   color = "blue", shape = "circle") +
-        geom_text(aes(x = lon[nrow(readings.df)], y = lat[nrow(readings.df)],
+        geom_point(aes(x = lon[nrow(readings.df)], 
+                       y = lat[nrow(readings.df)]), 
+                   color = "red", shape = "circle") +
+        geom_text(aes(x = lon[nrow(readings.df)], 
+                      y = lat[nrow(readings.df)],
                       label = "end"),
-                  color = "blue")
+                  color = "red")
       
       if (save.fig){
-        ggsave(p.altimeters, 
+        ggsave(p.altimeters[[k]], 
                filename = paste0(fig.dir, filename.root, "_altimeters.png"),
                device = "png", dpi = 600)
         
-        ggsave(p.tracks, 
+        ggsave(p.tracks[[k]], 
                filename = paste0(fig.dir, filename.root, "_tracks.png"),
                device = "png", dpi = 600)
       }
       
-      
+      out.data.dir[[k]] <- readings.df
       if (write.file){
         naming1<-paste0(summary.dir, summary.file.root,  "_SUMMARY.csv")
         out.df <- as.data.frame(out)
@@ -190,8 +200,15 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T){
       }
       
     }
+    
+    p.altimeters[[k1]] <- p.altimeters.dir
+    p.tracks[[k1]] <- p.tracks.dir
+    out.data[[k1]] <- out.data.dir
   }
 
+  out.list <- list(plot_altimeter = p.altimeters,
+                   plot_tracks = p.tracks,
+                   df_out = out.data)
     
 }
 

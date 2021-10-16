@@ -1,5 +1,5 @@
 # Runs readGPX_with laser v2 on all .GPX files in one folder
-
+# Use read_GPX_with_laser_fcn.R and run_readGPX_v3.R instead. 
 rm(list=ls())
 
 library(XML)
