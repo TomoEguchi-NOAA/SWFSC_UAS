@@ -4,4 +4,7 @@
 source("readGPX_with_laser_fcn.R")
 in.dir <- "data/leatherback_HMB_2021"
 
-output <- readGPX_v3(in.dir, write.file = F, save.fig = F)
+output <- readGPX_v3(in.dir, write.file = T, 
+                     save.fig = T, 
+                     over.write.data = F,   # Whether or not to overwrite data outputs
+                     over.write.fig = T)    # Whether or not to overwrite figures

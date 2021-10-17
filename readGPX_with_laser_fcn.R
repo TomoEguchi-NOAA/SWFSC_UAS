@@ -1,7 +1,13 @@
 # Runs readGPX_with laser v2 on all .GPX files in one folder
 # This version makes plots with ggplot2 
 
-readGPX_v3 <- function(in.dir, write.file = T, save.fig = T){
+# if just working on new directories, set over.write = F (default). Existing
+# files are left untouched.
+#
+# over.write.data = T will write over all output data files. 
+# over.write.fig = T will write over all output figure files. 
+
+readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F, over.write.fig = F){
   library(XML)
   library(gsubfn)
   library(lattice)
@@ -35,7 +41,6 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T){
     # the extension should be in uppercase
     all.files <- list.files(path = paste0(data.dir, "/GPX/"), 
                             pattern = ".GPX")
-    
     
     out <- data.frame(ID = character(),
                       Start_GMT =  character(), 
@@ -159,12 +164,15 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T){
       readings.df <- na.omit(readings.df)
       
       p.altimeters.dir[[k]] <- ggplot(readings.df) + 
-        geom_path(aes(x = run.time, y = laser), color = "black") +
-        geom_path(aes(x = run.time, y = ele), color = "red") +
-        geom_path(aes(x = run.time, y = ele.raw), color = "yellow")
+        geom_path(aes(x = run.time/60, y = laser), color = "black") +
+        geom_path(aes(x = run.time/60, y = ele), color = "red") +
+        geom_path(aes(x = run.time/60, y = ele.raw), color = "yellow") +
+        xlab("Time (min)") +
+        ylab("Altitude (m)")
       
       p.tracks.dir[[k]] <- ggplot(readings.df) + 
-        geom_path(aes(x = lon, y = lat, size = ele, color = run.time)) + 
+        geom_path(aes(x = lon, y = lat, 
+                      size = ele, color = run.time/60)) + 
         geom_point(aes(x = lon[1], y = lat[1]), 
                    color = "red", shape = "circle") +
         geom_text(aes(x = lon[1], y = lat[1], label = "begin"),
@@ -175,28 +183,60 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T){
         geom_text(aes(x = lon[nrow(readings.df)], 
                       y = lat[nrow(readings.df)],
                       label = "end"),
-                  color = "red")
+                  color = "red") +
+        xlab("Longitude") +
+        ylab("Latitude")
       
       if (save.fig){
-        ggsave(p.altimeters[[k]], 
-               filename = paste0(fig.dir, filename.root, "_altimeters.png"),
-               device = "png", dpi = 600)
+        fname1 <- paste0(fig.dir, filename.root, "_altimeters.png")
+        if (file.exists(fname1) == F){
+          ggsave(p.altimeters.dir[[k]], 
+                 filename = fname1,
+                 device = "png", dpi = 600)
+          
+        } else if (file.exists(fname1) == T & over.write.fig == T){
+          ggsave(p.altimeters.dir[[k]], 
+                 filename = fname1,
+                 device = "png", dpi = 600)
+        }
         
-        ggsave(p.tracks[[k]], 
-               filename = paste0(fig.dir, filename.root, "_tracks.png"),
+        fname2 <- paste0(fig.dir, filename.root, "_tracks.png")
+        if (file.exists(fname2) == F){
+          ggsave(p.tracks.dir[[k]], 
+               filename = fname2,
                device = "png", dpi = 600)
+        } else if (file.exists(fname1) == T & over.write.fig == T){
+          
+          ggsave(p.altimeters.dir[[k]], 
+                 filename = fname1,
+                 device = "png", dpi = 600)
+        }
       }
       
       out.data.dir[[k]] <- readings.df
       if (write.file){
         naming1<-paste0(summary.dir, summary.file.root,  "_SUMMARY.csv")
         out.df <- as.data.frame(out)
-        write.csv(out.df, file=naming1, row.names = F, quote = F)
+        if (file.exists(naming1) == F){
+          write.csv(out.df, 
+                    file = naming1, 
+                    row.names = F, quote = F)
+        } else if (file.exists(naming1) == T & over.write.data == T){
+          write.csv(out.df, 
+                    file = naming1, 
+                    row.names = F, quote = F)
+        }          
         
         naming2 <- paste0(data.dir, "/", filename.root, ".csv")
-        write.csv(readings.df, 
-                  file=naming2, 
-                  row.names=F, quote = F)
+        if (file.exists(naming2) == F){
+          write.csv(readings.df, 
+                    file=naming2, 
+                    row.names=F, quote = F)
+        } else if (file.exists(naming2) == T & over.write.data == T){
+          write.csv(readings.df, 
+                    file=naming2, 
+                    row.names=F, quote = F)
+        }
       }
       
     }
