@@ -1,6 +1,7 @@
 # Combines all summary files
 # This script can be used to combine all daily summary files into one. 
-# readGPX_with laser v2 batch.R should be used to create daily summary files.
+# readGPX_with laser v2 batch.R or run_readGPX_v3.R (preferred) should 
+# be used to create daily summary files.
 # 
 
 # Tomo Eguchi
@@ -8,7 +9,7 @@
 
 rm(list=ls())
 library(tidyverse)
-data.dir <- "data/Leatherback_2021/"
+data.dir <- "data/Leatherback_HMB_2021/"
 
 # find all directories within the project folder
 dirs <- list.dirs(path = data.dir)

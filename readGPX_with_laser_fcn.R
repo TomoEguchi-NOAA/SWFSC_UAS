@@ -19,14 +19,11 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
   #write.file <- T
   dirs <- list.dirs(in.dir, recursive = F)
   
-  p.altimeters <- list()
-  p.tracks <- list()
-  out.data <- list()
+  p.altimeters <- p.tracks <- p.aux <- p.sticks <- list()
+  out.data <- aux.data <- list()
   
   for (k1 in 1:length(dirs)){
-    p.altimeters.dir <- list()
-    p.tracks.dir <- list()
-    out.data.dir <- list()
+    p.altimeters.dir <- p.tracks.dir <- p.aux.dir <- p.sticks.dir <- out.data.dir <- aux.data.dir <- list()
     
     data.dir <- dirs[k1]
     summary.file.root <- unlist(strsplit(data.dir, "/"))[3]
@@ -83,6 +80,27 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
       lat <- as.numeric(coords['lat',])
       lon <- as.numeric(coords['lon',])
       
+      # other information:
+      volt <- xpathSApply(doc, path='//extensions/Voltage', xmlValue)
+      nick <- xpathSApply(doc, path='//extensions/NickAngle', xmlValue)
+      roll <- xpathSApply(doc, path='//extensions/RollAngle', xmlValue)
+      gas <- xpathSApply(doc, path='//extensions/Gas', xmlValue)
+      gas_actual <- unlist(lapply(gas, FUN = strsplit, ",")) %>% 
+        as.numeric() %>% 
+        matrix(ncol = 2, byrow = T) %>%
+        data.frame() %>%    
+        transmute(Actual = X1, Estimated = X2) %>% 
+        select("Actual")
+      
+      RCQ <- xpathSApply(doc, path='//extensions/RCQuality', xmlValue)
+      RCSticks <- xpathSApply(doc, path='//extensions/RCSticks', xmlValue)
+      RCSticks_First4 <- unlist(lapply(RCSticks, FUN = strsplit, ",")) %>% 
+        as.numeric() %>% 
+        matrix(ncol = 16, byrow = T) %>%
+        data.frame() %>%    
+        transmute(Nick = X1, Roll = X2, Yaw = X3, Gas = X4) 
+      
+    
       #df <- data.frame(time, lat, lon, laser, alt, ele, ele.raw)
       #head(df)
       time2 <- sub("T", " ", time)
@@ -161,7 +179,22 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
                                 lat = lat,
                                 dist.from.start = dist.from.start)
       
+      aux.data.df <- data.frame(run.time = as.numeric(run.time),
+                                volt = as.numeric(volt),
+                                nick = as.numeric(nick),
+                                roll = as.numeric(roll),
+                                gas = gas_actual,
+                                RCQ = as.numeric(RCQ),
+                                stick.nick = as.numeric(RCSticks_First4$Nick),
+                                stick.roll = as.numeric(RCSticks_First4$Roll),
+                                stick.yaw = as.numeric(RCSticks_First4$Yaw),
+                                stick.gas = as.numeric(RCSticks_First4$Gas))
+      
+      
       readings.df <- na.omit(readings.df)
+      
+      out.data.dir[[k]] <- readings.df
+      aux.data.dir[[k]] <- aux.data.df
       
       p.altimeters.dir[[k]] <- ggplot(readings.df) + 
         geom_path(aes(x = run.time/60, y = laser), color = "black") +
@@ -187,35 +220,101 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
         xlab("Longitude") +
         ylab("Latitude")
       
+      p.volt <- ggplot(aux.data.df) +
+        geom_path(aes(x = run.time, y = volt)) +
+        xlab("Time (sec)") + ylab("Voltage")
+      
+      p.nick <- ggplot(aux.data.df) +
+        geom_path(aes(x = run.time, y = nick)) +
+        xlab("Time (sec)") + ylab("Nick (degrees)")
+      
+      p.roll <- ggplot(aux.data.df) +
+        geom_path(aes(x = run.time, y = roll)) +
+        xlab("Time (sec)") + ylab("Roll (degrees)")
+
+      p.gas <- ggplot(aux.data.df) +
+        geom_path(aes(x = run.time, y = Actual)) +
+        xlab("Time (sec)") + ylab("Gas")
+      
+      p.RCQ <- ggplot(aux.data.df) +
+        geom_path(aes(x = run.time, y = RCQ)) +
+        xlab("Time (sec)") + ylab("RC Quality")
+      
+      p.aux.dir[[k]] <- cowplot::plot_grid(p.volt, p.nick,
+                                       p.roll, p.gas,
+                                       p.RCQ)
+      
+      p.stick.nick <- ggplot(aux.data.df) +
+        geom_path(aes(x = run.time, y = stick.nick)) +
+        xlab("Time (sec)") + ylab("Nick input (stick)")
+      
+      p.stick.roll <- ggplot(aux.data.df) +
+        geom_path(aes(x = run.time, y = stick.roll)) +
+        xlab("Time (sec)") + ylab("Roll input (stick)")
+      
+      p.stick.yaw <- ggplot(aux.data.df) +
+        geom_path(aes(x = run.time, y = stick.yaw)) +
+        xlab("Time (sec)") + ylab("Yaw input (stick)")
+      
+      p.stick.gas <- ggplot(aux.data.df) +
+        geom_path(aes(x = run.time, y = stick.gas)) +
+        xlab("Time (sec)") + ylab("Gas input (stick)")
+      
+      p.sticks.dir[[k]] <- cowplot::plot_grid(p.stick.nick,
+                                             p.stick.roll,
+                                             p.stick.yaw,
+                                             p.stick.gas)
       if (save.fig){
         fname1 <- paste0(fig.dir, filename.root, "_altimeters.png")
+        fname2 <- paste0(fig.dir, filename.root, "_tracks.png")
+        fname3 <- paste0(fig.dir, filename.root, "_aux.png")
+        fname4 <- paste0(fig.dir, filename.root, "_sticks.png")
+        
         if (file.exists(fname1) == F){
           ggsave(p.altimeters.dir[[k]], 
                  filename = fname1,
                  device = "png", dpi = 600)
-          
         } else if (file.exists(fname1) == T & over.write.fig == T){
           ggsave(p.altimeters.dir[[k]], 
                  filename = fname1,
                  device = "png", dpi = 600)
         }
         
-        fname2 <- paste0(fig.dir, filename.root, "_tracks.png")
         if (file.exists(fname2) == F){
           ggsave(p.tracks.dir[[k]], 
-               filename = fname2,
-               device = "png", dpi = 600)
-        } else if (file.exists(fname1) == T & over.write.fig == T){
-          
+                 filename = fname2,
+                 device = "png", dpi = 600)
+        } else if (file.exists(fname2) == T & over.write.fig == T){
           ggsave(p.altimeters.dir[[k]], 
-                 filename = fname1,
+                 filename = fname2,
                  device = "png", dpi = 600)
         }
+        
+        if (file.exists(fname3) == F){
+          ggsave(p.aux.dir[[k]], 
+                 filename = fname3,
+                 device = "png", dpi = 600)
+        } else if (file.exists(fname3) == T & over.write.fig == T){
+          ggsave(p.altimeters.dir[[k]], 
+                 filename = fname3,
+                 device = "png", dpi = 600)
+        }  
+        
+        if (file.exists(fname4) == F){
+          ggsave(p.sticks.dir[[k]],
+                 filename = fname4,
+                 device = "png", dpi = 600)
+        } else if (file.exists(fname4) == T & over.write.fig == T){
+          ggsave(p.altimeters.dir[[k]], 
+                 filename = fname4,
+                 device = "png", dpi = 600)
+        }  
+        
       }
       
-      out.data.dir[[k]] <- readings.df
       if (write.file){
         naming1<-paste0(summary.dir, summary.file.root,  "_SUMMARY.csv")
+        naming2 <- paste0(data.dir, "/", filename.root, ".csv")
         out.df <- as.data.frame(out)
         if (file.exists(naming1) == F){
           write.csv(out.df, 
@@ -225,10 +324,10 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
           write.csv(out.df, 
                     file = naming1, 
                     row.names = F, quote = F)
-        }          
+        }
         
-        naming2 <- paste0(data.dir, "/", filename.root, ".csv")
-        if (file.exists(naming2) == F){
+        if (
+          file.exists(naming2) == F){
           write.csv(readings.df, 
                     file=naming2, 
                     row.names=F, quote = F)
@@ -236,20 +335,27 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
           write.csv(readings.df, 
                     file=naming2, 
                     row.names=F, quote = F)
-        }
+        }          
+        
       }
       
     }
     
     p.altimeters[[k1]] <- p.altimeters.dir
     p.tracks[[k1]] <- p.tracks.dir
+    p.aux[[k1]] <- p.aux.dir
+    p.sticks[[k1]] <- p.sticks.dir
     out.data[[k1]] <- out.data.dir
+    aux.data[[k1]] <- aux.data.dir
   }
 
   out.list <- list(plot_altimeter = p.altimeters,
                    plot_tracks = p.tracks,
-                   df_out = out.data)
-    
+                   plot_aux = p.aux,
+                   plot_sticks = p.sticks,
+                   df_out = out.data,
+                   aux_data = aux.data)
+  return(out.list)  
 }
 
 
