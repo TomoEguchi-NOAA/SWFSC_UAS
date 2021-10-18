@@ -3,7 +3,7 @@
 
 rm(list=ls())
 source("readGPX_with_laser_fcn.R")
-in.dir <- "data/leatherback_HMB_2021"
+in.dir <- "data/leatherback_2021"
 
 output <- readGPX_v3(in.dir, 
                      write.file = T, 
