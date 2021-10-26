@@ -1,0 +1,133 @@
+---
+title: "Plot tracks for leatherback project October 2021"
+output: html_notebook
+---
+
+Creates trackline plots for the leatherback turtle project in October 2021. This is for the quarterly update meeting in October 2021.
+
+
+```{r setup}
+rm(list = ls())
+library(tidyverse)
+library(readr)
+library(ggplot2)
+library(sf)
+library(cowplot)
+#library(tmap)  # for faceting maps
+
+save.fig <- F
+
+land.color <- "cornsilk" #'#333333'
+water.color <- "lightcyan1"
+
+font.size <- 3.5
+
+# latitude boundaries
+N.lat <- 37.6
+S.lat <- 37.4
+E.lon <- -122.4
+W.lon <- -122.6
+
+# get shapefiles, OS dependent location so set things up:
+home.dir <- Sys.getenv("HOMEPATH")
+MBay <- st_read(paste0(home.dir, "/Documents/Oceans and Maps/mbnms_py2"),
+                      layer = "mbnms_py") %>% 
+  st_transform(crs = "+proj=longlat +datum=WGS84") 
+
+in.dir <- "data/leatherback_HMB_2021"
+
+col_defs <- cols(laser = col_double(),
+                 time = col_datetime(),
+                 run.time = col_double(),
+                 ele = col_double(),
+                 ele.raw = col_double(),
+                 lon = col_double(),
+                 lat = col_double(),
+                 dist.from.start = col_double())
+
+
+
+```
+
+Bring in the data files:
+
+```{r track_data}
+dirs <- list.dirs(in.dir, recursive = F)
+
+k <- k1 <- 1 
+all.dates <- list()
+for (k in 1:length(dirs)){
+  
+  all.files <- list.files(path = dirs[k], 
+                          pattern = ".csv")
+  
+  all.flights <- list()
+  for (k1 in 1:length(all.files)){
+    dat.1 <- read_csv(file = paste0(dirs[k], "/", all.files[k1]),
+                      col_types = col_defs)
+    
+    # create a spatial object
+    dat.1 %>% select(time, ele, lon, lat) %>%
+      mutate(date = as.Date(time, format = "%Y-%m-%d"), 
+             flight = k1) %>%
+      st_as_sf(coords = c("lon", "lat"), 
+           crs = "+proj=longlat +datum=WGS84") -> dat.1.sp
+    all.flights[[k1]] <- dat.1.sp
+    
+  } 
+
+  all.dates[[k]] <- do.call(rbind, all.flights)
+}
+
+```
+
+Make some plots:
+
+```{r}
+
+all.dates.df <- do.call(rbind, all.dates) 
+all.dates.df %>% group_by(date, flight) -> all.dates.df
+# all.dates.df %>%
+#   tm_lines()
+
+k <- 1
+plots <- list()
+for (k in 1:length(all.dates)){
+  bbox <- st_bbox(st_geometry(all.dates[[k]]))p
+  
+  p <- ggplot() +
+    geom_sf(data = MBay, 
+            fill = water.color, 
+            color = "black") +
+    
+    geom_sf(data = all.dates[[k]], 
+            aes(color = as.factor(flight)),
+            size = 0.1) +
+    coord_sf(xlim = c(bbox$xmin - 0.02, E.lon),
+             ylim = c(S.lat, bbox$ymax + 0.02)) +
+    #ylab("Latitude") +
+    #xlab("Longitude") +
+    facet_wrap(~ date) +
+    theme(plot.title = element_text(hjust = 0.5),
+          legend.position = "none", #c(0.1, 0.3),
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank(),
+          #panel.grid = element_line(color = "darkgray"),
+          axis.ticks.length = unit(0, "inches"),
+          #legend.background = element_blank(),
+          legend.title = element_blank(),
+          panel.background = element_rect(fill = land.color),
+          panel.border = element_rect(color = "black", size = 0.1, fill = NA))
+  
+  plots[[k]] <- as_gtable(p)
+  #ggsave(filename = paste0("figures/", all.dates[[k]]$date[1], ".png"),
+  #       device = "png", dpi = 600)
+}
+
+p.all <- plot_grid(plotlist = plots)
+
+if (save.fig)
+  ggsave(filename = "figures/all_dates.png",
+         device = "png", dpi = 600)
+```
+
