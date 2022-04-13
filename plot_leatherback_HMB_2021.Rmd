@@ -93,7 +93,7 @@ all.dates.df %>% group_by(date, flight) -> all.dates.df
 k <- 1
 plots <- list()
 for (k in 1:length(all.dates)){
-  bbox <- st_bbox(st_geometry(all.dates[[k]]))p
+  bbox <- st_bbox(st_geometry(all.dates[[k]]))
   
   p <- ggplot() +
     geom_sf(data = MBay, 
