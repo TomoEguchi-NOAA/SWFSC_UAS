@@ -9,7 +9,15 @@
 
 rm(list=ls())
 library(tidyverse)
-data.dir <- "data/Leatherback_HMB_2021/"
+
+#data.dir <- "data/Leatherback_HMB_2021/"
+data.dir <- "data/Gray whale PB 2022"
+
+idx.slash.max <- str_locate_all(pattern = "/", data.dir) %>% unlist() %>% max()
+
+if (idx.slash.max < str_length(data.dir)){
+  data.dir <- paste0(data.dir, "/")
+}
 
 # find all directories within the project folder
 dirs <- list.dirs(path = data.dir)

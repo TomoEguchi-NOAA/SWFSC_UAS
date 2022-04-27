@@ -20,7 +20,7 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
   dirs <- list.dirs(in.dir, recursive = F)
   
   p.altimeters <- p.tracks <- p.aux <- p.sticks <- list()
-  out.data <- aux.data <- list()
+  out.data <- aux.data <- summary.data <- list()
   
   for (k1 in 1:length(dirs)){
     p.altimeters.dir <- p.tracks.dir <- p.aux.dir <- p.sticks.dir <- out.data.dir <- aux.data.dir <- list()
@@ -55,7 +55,7 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
     
     #names(out)<-c("Start_GMT", "End_GMT","Start_Lat", "Start_Long", "Duration_s", "Max_elevation_m", "Max_distance_m", "Total_distance_m", "Max_vel_m/s", "Mean_vel_m/s")
     
-    naming1<-paste0(summary.dir, summary.file.root,  "_SUMMARY.csv")
+    #naming1<-paste0(summary.dir, summary.file.root,  "_SUMMARY.csv")
     
     k <- 1
     for (k in 1:length(all.files)){
@@ -197,9 +197,14 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
       aux.data.dir[[k]] <- aux.data.df
       
       p.altimeters.dir[[k]] <- ggplot(readings.df) + 
-        geom_path(aes(x = run.time/60, y = laser), color = "black") +
-        geom_path(aes(x = run.time/60, y = ele), color = "red") +
-        geom_path(aes(x = run.time/60, y = ele.raw), color = "yellow") +
+        geom_path(aes(x = run.time/60, y = laser, color = "laser")) +
+        geom_path(aes(x = run.time/60, y = ele, color = "baro")) +
+        geom_path(aes(x = run.time/60, y = ele.raw, color = "baro.raw")) +
+        scale_color_manual(name="Altimeter",
+                           breaks=c("laser", "baro", "baro.raw"),
+                           values=c("laser" = "yellow", 
+                                    "baro" = "black", 
+                                    "baro.raw" = "red")) +
         xlab("Time (min)") +
         ylab("Altitude (m)")
       
@@ -285,7 +290,7 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
                  filename = fname2,
                  device = "png", dpi = 600)
         } else if (file.exists(fname2) == T & over.write.fig == T){
-          ggsave(p.altimeters.dir[[k]], 
+          ggsave(p.tracks.dir[[k]], 
                  filename = fname2,
                  device = "png", dpi = 600)
         }
@@ -295,7 +300,7 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
                  filename = fname3,
                  device = "png", dpi = 600)
         } else if (file.exists(fname3) == T & over.write.fig == T){
-          ggsave(p.altimeters.dir[[k]], 
+          ggsave(p.aux.dir[[k]], 
                  filename = fname3,
                  device = "png", dpi = 600)
         }  
@@ -305,7 +310,7 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
                  filename = fname4,
                  device = "png", dpi = 600)
         } else if (file.exists(fname4) == T & over.write.fig == T){
-          ggsave(p.altimeters.dir[[k]], 
+          ggsave(p.sticks.dir[[k]], 
                  filename = fname4,
                  device = "png", dpi = 600)
         }  
@@ -313,32 +318,51 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
       }
       
       if (write.file){
-        naming1<-paste0(summary.dir, summary.file.root,  "_SUMMARY.csv")
+        #naming1<-paste0(summary.dir, summary.file.root,  "_SUMMARY.csv")
         naming2 <- paste0(data.dir, "/", filename.root, ".csv")
-        out.df <- as.data.frame(out)
-        if (file.exists(naming1) == F){
-          write.csv(out.df, 
-                    file = naming1, 
-                    row.names = F, quote = F)
-        } else if (file.exists(naming1) == T & over.write.data == T){
-          write.csv(out.df, 
-                    file = naming1, 
-                    row.names = F, quote = F)
-        }
+        # out.df <- as.data.frame(out)
+        # if (file.exists(naming1) == F){
+        #   write.csv(out.df, 
+        #             file = naming1, 
+        #             row.names = F, quote = F)
+        # } else {
+        #   if (over.write.data == T){
+        #     write.csv(out.df, 
+        #               file = naming1, 
+        #               row.names = F, quote = F)
+        #   }
+        # }
         
         if (
           file.exists(naming2) == F){
           write.csv(readings.df, 
                     file=naming2, 
                     row.names=F, quote = F)
-        } else if (file.exists(naming2) == T & over.write.data == T){
-          write.csv(readings.df, 
-                    file=naming2, 
-                    row.names=F, quote = F)
+        } else {
+          if (over.write.data == T){
+            write.csv(readings.df, 
+                      file=naming2, 
+                      row.names=F, quote = F)
+          } 
         }          
         
       }
       
+    }
+    
+    if (write.file){
+      naming1<-paste0(summary.dir, summary.file.root,  "_SUMMARY.csv")
+      if (file.exists(naming1) == F){
+        write.csv(out, 
+                  file = naming1, 
+                  row.names = F, quote = F)
+      } else {
+        if (over.write.data == T){
+          write.csv(out, 
+                    file = naming1, 
+                    row.names = F, quote = F)
+        }
+      }
     }
     
     p.altimeters[[k1]] <- p.altimeters.dir
@@ -347,6 +371,7 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
     p.sticks[[k1]] <- p.sticks.dir
     out.data[[k1]] <- out.data.dir
     aux.data[[k1]] <- aux.data.dir
+    summary.data[[k1]] <- out
   }
 
   out.list <- list(plot_altimeter = p.altimeters,

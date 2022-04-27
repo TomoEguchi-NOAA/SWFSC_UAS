@@ -9,5 +9,5 @@ in.dir <- "data/Gray whale PB 2022"
 output <- readGPX_v3(in.dir, 
                      write.file = T, 
                      save.fig = T, 
-                     over.write.data = T,   # Whether or not to overwrite data outputs
-                     over.write.fig = F)    # Whether or not to overwrite figures
+                     over.write.data = F,   # Whether or not to overwrite data outputs
+                     over.write.fig = T)    # Whether or not to overwrite figures
