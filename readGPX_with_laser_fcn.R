@@ -320,18 +320,6 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
       if (write.file){
         #naming1<-paste0(summary.dir, summary.file.root,  "_SUMMARY.csv")
         naming2 <- paste0(data.dir, "/", filename.root, ".csv")
-        # out.df <- as.data.frame(out)
-        # if (file.exists(naming1) == F){
-        #   write.csv(out.df, 
-        #             file = naming1, 
-        #             row.names = F, quote = F)
-        # } else {
-        #   if (over.write.data == T){
-        #     write.csv(out.df, 
-        #               file = naming1, 
-        #               row.names = F, quote = F)
-        #   }
-        # }
         
         if (
           file.exists(naming2) == F){
@@ -383,9 +371,4 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
   return(out.list)  
 }
 
-
-#time <- as.character(time)
-# out.df <- as.data.frame(out)
-# 
-# write.csv(out.df, file=naming1, row.names = F, quote = F)
 
