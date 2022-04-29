@@ -19,7 +19,9 @@ in.dir <- "C:/Users/tomo.eguchi/Documents/TomosFolders/SWFSC/CHLHP/Piedras Blanc
 # Difference in time. Provide hours and minutes, turn them into hours.
 delta.time <- 7 + 10/60   
 
-# The following code was originally found here: https://www.thomasvanhoey.com/post/changing-photo-metadata-with-r/
+# The following code was originally found here: 
+# https://www.thomasvanhoey.com/post/changing-photo-metadata-with-r/
+
 # Some modifications were made.
 
 # regexp: (?i) means case insensitive. $ means the end of line or string
