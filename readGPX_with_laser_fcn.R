@@ -18,7 +18,10 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
   k1 <- 1
   #write.file <- T
   dirs <- list.dirs(in.dir, recursive = F)
-  
+  if (length(dirs) == 0){
+    dirs <- in.dir
+  }
+    
   p.altimeters <- p.tracks <- p.aux <- p.sticks <- list()
   out.data <- aux.data <- summary.data <- list()
   
