@@ -10,7 +10,8 @@ source("readGPX_with_laser_fcn.R")
 #in.dir <- "data/Gray whale PB 2022"
 #in.dir <- "data/Leatherback_HMB_2021 - Copy"
 #in.dir <- "data/Leatherback_HMB_2022"
-in.dir <- "data/Agua Hedionda/"
+#in.dir <- "data/Agua Hedionda/"
+in.dir <- "data/Piedras Blancas/Flight data/"
 
 output <- readGPX_v3(in.dir, 
                      write.file = T, 
