@@ -89,8 +89,10 @@ run.GPX.extract.fcn <- function(FILE){
     x.dist <- length(dist.from.start[x])
     print(paste("THE FIRST ", x.dist, " RECORD(S) REMOVED DUE TO ERROR IN COMPUTING MOVEMENT WHILE STATIONARY AFTER MOTOR START"))
     x.rm <- seq(from=1, by=1, to = x.dist)
-    dist.from.start <- dist.from.start[-x.rm]
-    ele <- ele[-x.rm]
+    #dist.from.start <- dist.from.start[-x.rm]
+    #ele <- ele[-x.rm]
+    dist.from.start[x.rm] <- NA
+    ele[x.rm] <- NA
   } 
   
   out.list <- list(laser = laser,
@@ -230,24 +232,23 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
                                 stick.yaw = as.numeric(out.data$RCSticks_First4$Yaw),
                                 stick.gas = as.numeric(out.data$RCSticks_First4$Gas))
       
-      
+      readings.df %>% select(run.time, laser, ele, ele.raw) %>%
+        pivot_longer(cols = !run.time,
+                     names_to = "Input",
+                     values_to = "Altitude") -> altimeter.data
       #readings.df <- na.omit(readings.df)
       
       out.data.dir[[k]] <- readings.df
       aux.data.dir[[k]] <- aux.data.df
       
-      p.altimeters.dir[[k]] <- ggplot(readings.df) + 
-        geom_path(aes(x = run.time/60, y = ele), 
-                  color = "black") +
-        geom_path(aes(x = run.time/60, y = ele.raw), 
-                  color = "red") +
-        geom_path(aes(x = run.time/60, y = laser), 
-                  color = "yellow") +
-        scale_color_manual(name="Altimeter",
-                           breaks=c("baro", "baro.raw", "laser"),
-                           values=c("baro" = "black", 
-                                    "baro.raw" = "red",
-                                    "laser" = "yellow")) +
+      p.altimeters.dir[[k]] <- ggplot(altimeter.data) + 
+        geom_path(aes(x = run.time/60, Altitude, color = Input)) +
+        theme(legend.title=element_blank()) +
+        scale_color_discrete(name = "Altimeter",
+                           breaks=c("ele", "ele.raw", "laser"),
+                           labels=c("baro",
+                                    "baro.raw",
+                                    "laser")) +
         xlab("Time (min)") +
         ylab("Altitude (m)")
       
