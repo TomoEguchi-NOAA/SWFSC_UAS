@@ -1,6 +1,132 @@
 # Runs readGPX_with laser v2 on all .GPX files in one folder
 # This version makes plots with ggplot2 
 
+library(XML)
+library(gsubfn)
+library(lattice)
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+
+run.GPX.extract.fcn <- function(FILE){
+  doc <- xmlParse(FILE, useInternalNodes=TRUE)
+  
+  ele <- as.numeric(xpathSApply(doc, path='//trkpt/ele', xmlValue))
+  ele.raw <- as.numeric(xpathSApply(doc, path='//extensions/ele_raw', xmlValue))
+  head<- xpathSApply(doc, path='//extensions/Compass', xmlValue)
+  
+  heading<-strapply(head, "(\\d+).*", as.numeric, simplify = c)
+  laser <- as.numeric(xpathSApply(doc, path='//extensions/Laser', xmlValue))
+  # Sometimes there is no laser altimeter readings
+  if (length(laser) == 0) laser <- rep(0, length(ele))
+  
+  alt <- xpathSApply(doc, path='//extensions/Altimeter', xmlValue)
+  alt <- as.numeric(gsub(",.*$", "", alt))/20
+  time <- xpathSApply(doc, path = '//trkpt/time', xmlValue)
+  coords <- xpathSApply(doc, path = '//trkpt', xmlAttrs)
+  # Extract latitude and longitude from the coordinates
+  lat <- as.numeric(coords['lat',])
+  lon <- as.numeric(coords['lon',])
+  
+  # other information:
+  volt <- xpathSApply(doc, path='//extensions/Voltage', xmlValue)
+  nick <- xpathSApply(doc, path='//extensions/NickAngle', xmlValue)
+  roll <- xpathSApply(doc, path='//extensions/RollAngle', xmlValue)
+  gas <- xpathSApply(doc, path='//extensions/Gas', xmlValue)
+  gas_actual <- unlist(lapply(gas, FUN = strsplit, ",")) %>% 
+    as.numeric() %>% 
+    matrix(ncol = 2, byrow = T) %>%
+    data.frame() %>%    
+    transmute(Actual = X1, Estimated = X2) %>% 
+    dplyr::select("Actual")
+  
+  RCQ <- xpathSApply(doc, path='//extensions/RCQuality', xmlValue)
+  RCSticks <- xpathSApply(doc, path='//extensions/RCSticks', xmlValue)
+  RCSticks_First4 <- unlist(lapply(RCSticks, FUN = strsplit, ",")) %>% 
+    as.numeric() %>% 
+    matrix(nrow = length(RCQ), byrow = T) %>%
+    #matrix(ncol = 16, byrow = T) %>%
+    data.frame() %>%    
+    transmute(Nick = X1, Roll = X2, Yaw = X3, Gas = X4) 
+  
+  
+  #df <- data.frame(time, lat, lon, laser, alt, ele, ele.raw)
+  #head(df)
+  time2 <- sub("T", " ", time)
+  time3 <- sub("Z", "", time2)
+  # the following (OS1) preserves decimal seconds, although they are not printed
+  time4 <- as_datetime(strftime(time3, format = "%Y-%m-%d %H:%M:%OS1", tz="GMT")) 
+  
+  # time<-unlist(strsplit(time, "Z")) #remove the Z after the time
+  # time<-unlist(strsplit(time, "T", fixed=TRUE)) # split the string into date and time by removing the T
+  n.records<-length(time4)
+  # date.col<-time[seq(from=1, by=2, to=n.records)] #pull out the date (odd numbered records)
+  # time.col<-time[seq(from=2, by=2, to=n.records)] #pull out the times (even numbered records)
+  # time<-paste(date.col, time.col, sep=" ") # paste them back together as a character vector
+  # time<-strptime(time, format="%Y-%m-%d %H:%M:%S", tz="GMT") # convert the character vector to a timedate object
+  
+  interval<-diff(time4)
+  #interval <- lubridate::interval(time4)
+  #flight.time<-difftime(max(time),min(time), units="secs") 
+  #run.time<-difftime(time,min(time), units="secs") 
+  flight.time <- as.numeric(difftime(max(time4),  min(time4), units = "sec"))
+  run.time <- time4 - rep(min(time4), length(time4))
+  
+  dtr<-pi/180
+  dist.from.start <- 6371 * 1000 * acos((sin(lat[1] * dtr) * sin(lat * dtr)) + 
+                                          (cos(lat[1] * dtr) * cos(lat * dtr) * cos(lon * dtr - lon[1] * dtr)))
+  
+  rise <- diff(ele)
+  run <- diff(dist.from.start)
+  displacement <- sqrt(run^2 + rise^2)
+  max.displacement <- max(displacement)
+  mst <- as.numeric(interval[displacement == max.displacement])
+  distance <- sqrt(dist.from.start^2+ele^2)
+  
+  x.dist <- 0
+  if(is.na(dist.from.start[1])){
+    x <- is.nan(dist.from.start)
+    x.dist <- length(dist.from.start[x])
+    print(paste("THE FIRST ", x.dist, " RECORD(S) REMOVED DUE TO ERROR IN COMPUTING MOVEMENT WHILE STATIONARY AFTER MOTOR START"))
+    x.rm <- seq(from=1, by=1, to = x.dist)
+    dist.from.start <- dist.from.start[-x.rm]
+    ele <- ele[-x.rm]
+  } 
+  
+  out.list <- list(laser = laser,
+                   max.elevation = max(ele),
+                   rise = rise,
+                   run = run,
+                   displacement = displacement, # x-y-z movement between recording intervals
+                   total.displacement = cumsum(displacement), # total displacement during flight
+                   max.displacement = max.displacement,
+                   mst = mst,
+                   max.speed = unique(max.displacement/mst),
+                   distance = distance,  
+                   max.distance = max(distance),
+                   mean.speed = max(cumsum(displacement))/as.numeric(flight.time),
+                   time = time,
+                   time4 = time4,
+                   lat = lat,
+                   lon = lon,
+                   flight.time = flight.time,
+                   dist.from.start = dist.from.start,
+                   ele = ele,
+                   ele.raw = ele.raw,
+                   x.dist = x.dist,
+                   run.time = run.time,
+                   volt = volt,
+                   nick = nick,
+                   roll = roll,
+                   RCSticks_First4 = RCSticks_First4,
+                   gas_actual = gas_actual,
+                   RCQ = RCQ)
+  
+  return(out.list)
+  
+}
+
+
 # if just working on new directories, set over.write = F (default). Existing
 # files are left untouched.
 #
@@ -8,13 +134,7 @@
 # over.write.fig = T will write over all output figure files. 
 
 readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F, over.write.fig = F){
-  library(XML)
-  library(gsubfn)
-  library(lattice)
-  library(tidyverse)
-  library(ggplot2)
-  library(lubridate)
-
+ 
   k1 <- 1
   #write.file <- T
   dirs <- list.dirs(in.dir, recursive = F)
@@ -67,147 +187,67 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
       
       filename.root <- unlist(strsplit(filename, ".GPX"))
       
-      doc <- xmlParse(FILE, useInternalNodes=TRUE)
-      
-      ele <- as.numeric(xpathSApply(doc, path='//trkpt/ele', xmlValue))
-      ele.raw <- as.numeric(xpathSApply(doc, path='//extensions/ele_raw', xmlValue))
-      head<- xpathSApply(doc, path='//extensions/Compass', xmlValue)
-      
-      heading<-strapply(head, "(\\d+).*", as.numeric, simplify = c)
-      laser <- as.numeric(xpathSApply(doc, path='//extensions/Laser', xmlValue))
-      alt <- xpathSApply(doc, path='//extensions/Altimeter', xmlValue)
-      alt <- as.numeric(gsub(",.*$", "", alt))/20
-      time <- xpathSApply(doc, path = '//trkpt/time', xmlValue)
-      coords <- xpathSApply(doc, path = '//trkpt', xmlAttrs)
-      # Extract latitude and longitude from the coordinates
-      lat <- as.numeric(coords['lat',])
-      lon <- as.numeric(coords['lon',])
-      
-      # other information:
-      volt <- xpathSApply(doc, path='//extensions/Voltage', xmlValue)
-      nick <- xpathSApply(doc, path='//extensions/NickAngle', xmlValue)
-      roll <- xpathSApply(doc, path='//extensions/RollAngle', xmlValue)
-      gas <- xpathSApply(doc, path='//extensions/Gas', xmlValue)
-      gas_actual <- unlist(lapply(gas, FUN = strsplit, ",")) %>% 
-        as.numeric() %>% 
-        matrix(ncol = 2, byrow = T) %>%
-        data.frame() %>%    
-        transmute(Actual = X1, Estimated = X2) %>% 
-        select("Actual")
-      
-      RCQ <- xpathSApply(doc, path='//extensions/RCQuality', xmlValue)
-      RCSticks <- xpathSApply(doc, path='//extensions/RCSticks', xmlValue)
-      RCSticks_First4 <- unlist(lapply(RCSticks, FUN = strsplit, ",")) %>% 
-        as.numeric() %>% 
-        matrix(ncol = 16, byrow = T) %>%
-        data.frame() %>%    
-        transmute(Nick = X1, Roll = X2, Yaw = X3, Gas = X4) 
-      
-    
-      #df <- data.frame(time, lat, lon, laser, alt, ele, ele.raw)
-      #head(df)
-      time2 <- sub("T", " ", time)
-      time3 <- sub("Z", "", time2)
-      # the following (OS1) preserves decimal seconds, although they are not printed
-      time4 <- as_datetime(strftime(time3, format = "%Y-%m-%d %H:%M:%OS1", tz="GMT")) 
-      
-      # time<-unlist(strsplit(time, "Z")) #remove the Z after the time
-      # time<-unlist(strsplit(time, "T", fixed=TRUE)) # split the string into date and time by removing the T
-      n.records<-length(time4)
-      # date.col<-time[seq(from=1, by=2, to=n.records)] #pull out the date (odd numbered records)
-      # time.col<-time[seq(from=2, by=2, to=n.records)] #pull out the times (even numbered records)
-      # time<-paste(date.col, time.col, sep=" ") # paste them back together as a character vector
-      # time<-strptime(time, format="%Y-%m-%d %H:%M:%S", tz="GMT") # convert the character vector to a timedate object
-      
-      interval<-diff(time4)
-      #interval <- lubridate::interval(time4)
-      #flight.time<-difftime(max(time),min(time), units="secs") 
-      #run.time<-difftime(time,min(time), units="secs") 
-      flight.time <- as.numeric(difftime(max(time4),  min(time4), units = "sec"))
-      run.time <- time4 - rep(min(time4), length(time4))
-      
-      dtr<-pi/180
-      dist.from.start <- 6371 * 1000 * acos((sin(lat[1] * dtr) * sin(lat * dtr)) + 
-                                              (cos(lat[1] * dtr) * cos(lat * dtr) * cos(lon * dtr - lon[1] * dtr)))
-      
-      x.dist <- 0
-      if(is.na(dist.from.start[1])){
-        x <- is.nan(dist.from.start)
-        x.dist <- length(dist.from.start[x])
-        print(paste("THE FIRST ", x.dist, " RECORD(S) REMOVED DUE TO ERROR IN COMPUTING MOVEMENT WHILE STATIONARY AFTER MOTOR START"))
-        x.rm <- seq(from=1, by=1, to = x.dist)
-        dist.from.start <- dist.from.start[-x.rm]
-        ele <- ele[-x.rm]
-      } 
-      
-      max.elevation <- max(ele)
-      rise <- diff(ele)
-      run <- diff(dist.from.start)
-      displacement <- sqrt(run^2 + rise^2) # x-y-z movement between recording intervals
-      total.displacement <- cumsum(displacement) # total displacement during flight
-      max.displacement <- max(displacement)
-      mst <- as.numeric(interval[displacement == max.displacement])
-      max.speed <- unique(max.displacement/mst)
-      distance <- sqrt(dist.from.start^2+ele^2)   
-      max.distance <- max(distance)
-      mean.speed <- max(total.displacement)/as.numeric(flight.time)
+      out.data <- run.GPX.extract.fcn(FILE)
       
       out[k,] <- c(paste0(filename.root, ".GPX"), 
-                   as.character(min(time4)), 
-                   as.character(max(time4)), 
-                   round(lat[1],3), 
-                   round(lon[1],3),
-                   round(flight.time,2), 
-                   round(max.elevation,2), 
-                   round(max.distance,2),
-                   round(max(total.displacement),2), 
-                   round(max.speed,2), 
-                   round(mean.speed, 2))
+                   as.character(min(out.data$time4)), 
+                   as.character(max(out.data$time4)), 
+                   round(out.data$lat[1],3), 
+                   round(out.data$lon[1],3),
+                   round(out.data$flight.time,2), 
+                   round(out.data$max.elevation,2), 
+                   round(out.data$max.distance,2),
+                   round(max(out.data$total.displacement),2), 
+                   round(out.data$max.speed,2), 
+                   round(out.data$mean.speed, 2))
       
       
-      time <- as.character(time)
+      time <- as.character(out.data$time)
       #readings.df <- as.data.frame(cbind(time,lon,lat,laser,alt,ele,ele.raw,heading))
       
-      if (x.dist > 0) {
-        dist.from.start <- c(rep(NA, x.dist), dist.from.start)
-        ele <- c(rep(NA, x.dist), ele)
+      if (out.data$x.dist > 0) {
+        dist.from.start <- c(rep(NA, out.data$x.dist),out.data$dist.from.start)
+        ele <- c(rep(NA, out.data$x.dist), out.data$ele)
       }
       
-      readings.df <- data.frame(laser = laser,
-                                time = time,
-                                run.time = as.numeric(run.time),
-                                ele = ele,
-                                ele.raw = ele.raw,
-                                lon = lon,
-                                lat = lat,
-                                dist.from.start = dist.from.start)
+      readings.df <- data.frame(laser = out.data$laser,
+                                time = out.data$time,
+                                run.time = as.numeric(out.data$run.time),
+                                ele = out.data$ele,
+                                ele.raw = out.data$ele.raw,
+                                lon = out.data$lon,
+                                lat = out.data$lat,
+                                dist.from.start = out.data$dist.from.start)
       
-      aux.data.df <- data.frame(run.time = as.numeric(run.time),
-                                volt = as.numeric(volt),
-                                nick = as.numeric(nick),
-                                roll = as.numeric(roll),
-                                gas = gas_actual,
-                                RCQ = as.numeric(RCQ),
-                                stick.nick = as.numeric(RCSticks_First4$Nick),
-                                stick.roll = as.numeric(RCSticks_First4$Roll),
-                                stick.yaw = as.numeric(RCSticks_First4$Yaw),
-                                stick.gas = as.numeric(RCSticks_First4$Gas))
+      aux.data.df <- data.frame(run.time = as.numeric(out.data$run.time),
+                                volt = as.numeric(out.data$volt),
+                                nick = as.numeric(out.data$nick),
+                                roll = as.numeric(out.data$roll),
+                                gas = out.data$gas_actual,
+                                RCQ = as.numeric(out.data$RCQ),
+                                stick.nick = as.numeric(out.data$RCSticks_First4$Nick),
+                                stick.roll = as.numeric(out.data$RCSticks_First4$Roll),
+                                stick.yaw = as.numeric(out.data$RCSticks_First4$Yaw),
+                                stick.gas = as.numeric(out.data$RCSticks_First4$Gas))
       
       
-      readings.df <- na.omit(readings.df)
+      #readings.df <- na.omit(readings.df)
       
       out.data.dir[[k]] <- readings.df
       aux.data.dir[[k]] <- aux.data.df
       
       p.altimeters.dir[[k]] <- ggplot(readings.df) + 
-        geom_path(aes(x = run.time/60, y = laser, color = "laser")) +
-        geom_path(aes(x = run.time/60, y = ele, color = "baro")) +
-        geom_path(aes(x = run.time/60, y = ele.raw, color = "baro.raw")) +
+        geom_path(aes(x = run.time/60, y = ele), 
+                  color = "black") +
+        geom_path(aes(x = run.time/60, y = ele.raw), 
+                  color = "red") +
+        geom_path(aes(x = run.time/60, y = laser), 
+                  color = "yellow") +
         scale_color_manual(name="Altimeter",
-                           breaks=c("laser", "baro", "baro.raw"),
-                           values=c("laser" = "yellow", 
-                                    "baro" = "black", 
-                                    "baro.raw" = "red")) +
+                           breaks=c("baro", "baro.raw", "laser"),
+                           values=c("baro" = "black", 
+                                    "baro.raw" = "red",
+                                    "laser" = "yellow")) +
         xlab("Time (min)") +
         ylab("Altitude (m)")
       

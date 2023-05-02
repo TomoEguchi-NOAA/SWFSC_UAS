@@ -11,10 +11,11 @@ source("readGPX_with_laser_fcn.R")
 #in.dir <- "data/Leatherback_HMB_2021 - Copy"
 #in.dir <- "data/Leatherback_HMB_2022"
 #in.dir <- "data/Agua Hedionda/"
-in.dir <- "data/Piedras Blancas/Flight data/"
+#in.dir <- "data/Piedras Blancas/Flight data/"
+in.dir <- "data/Jamul training/"
 
 output <- readGPX_v3(in.dir, 
                      write.file = T, 
                      save.fig = T, 
                      over.write.data = F,   # Whether or not to overwrite data outputs
-                     over.write.fig = T)    # Whether or not to overwrite figures
+                     over.write.fig = F)    # Whether or not to overwrite figures

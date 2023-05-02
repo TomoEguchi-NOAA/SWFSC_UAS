@@ -10,8 +10,9 @@
 rm(list=ls())
 library(tidyverse)
 
-data.dir <- "data/Leatherback_HMB_2022/"
+#data.dir <- "data/Leatherback_HMB_2022/"
 #data.dir <- "data/Gray whale PB 2022"
+data.dir <- "data/Jamul training/20230418_APH28R"
 
 idx.slash.max <- str_locate_all(pattern = "/", data.dir) %>% unlist() %>% max()
 
