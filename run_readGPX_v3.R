@@ -13,7 +13,8 @@ source("readGPX_with_laser_fcn.R")
 #in.dir <- "data/Agua Hedionda/"
 #in.dir <- "data/Piedras Blancas/Flight data/"
 #in.dir <- "data/Jamul training/"
-in.dir <- "data/San Diego Bay training/"
+#in.dir <- "data/San Diego Bay training/"
+in.dir <- "data/San Diego Coastal Cetacean/"
 
 output <- readGPX_v3(in.dir, 
                      write.file = T, 
