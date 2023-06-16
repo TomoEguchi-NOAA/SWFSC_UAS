@@ -176,6 +176,24 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
                       Max_vel_ms = numeric(), 
                       Mean_vel_ms = numeric())
     
+    smart.log <- data.frame(Date = character(),
+                            TakeOffTime = character(),
+                            UAS = character(),
+                            TotalTime = numeric(),
+                            Landings = numeric(),
+                            Pilot = character(),
+                            Latitude = numeric(),
+                            Longitude = numeric(),
+                            MissionType = character(),
+                            IssuesEncountered = character(),
+                            COA = character(),
+                            Project = character(),
+                            Event = character(),
+                            ProjectType = character(),
+                            DataProduct = character(),
+                            VisualObserver = character(),
+                            Remarks = character())
+    
     #out <- matrix(NA, nrow = length(all.files), ncol = 11)
     
     #names(out)<-c("Start_GMT", "End_GMT","Start_Lat", "Start_Long", "Duration_s", "Max_elevation_m", "Max_distance_m", "Total_distance_m", "Max_vel_m/s", "Mean_vel_m/s")
@@ -203,8 +221,26 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
                    round(out.data$max.speed,2), 
                    round(out.data$mean.speed, 2))
       
-      
       time <- as.character(out.data$time)
+      
+      smart.log[k,] <- c(format(min(date(out.data$time4)), "%m/%d/%Y"),   # Date
+                         strftime(min(out.data$time4), format = "%H:%M", tz = "UTC"),   # Time
+                         " ",  # UAS
+                         round(out.data$flight.time/3600, 2), # Total flight time
+                         "", # Landings
+                         "", # Pilot
+                         round(out.data$lat[1],3),  # Latitude
+                         round(out.data$lon[1],3),  # Longitude
+                         "",  # Mission Type
+                         "",  # Issues
+                         "",  # COA
+                         "",  # Project
+                         "",  # Event
+                         "",  # Project Type
+                         "",  # Data Product
+                         "",  # Visual Observer
+                         "")  # Remarks
+      
       #readings.df <- as.data.frame(cbind(time,lon,lat,laser,alt,ele,ele.raw,heading))
       
       if (out.data$x.dist > 0) {
@@ -254,7 +290,7 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
       
       p.tracks.dir[[k]] <- ggplot(readings.df) + 
         geom_path(aes(x = lon, y = lat, 
-                      size = ele, color = run.time/60)) + 
+                      linewidth = ele, color = run.time/60)) + 
         geom_point(aes(x = lon[1], y = lat[1]), 
                    color = "red", shape = "circle") +
         geom_text(aes(x = lon[1], y = lat[1], label = "begin"),
@@ -392,6 +428,21 @@ readGPX_v3 <- function(in.dir, write.file = T, save.fig = T, over.write.data = F
         if (over.write.data == T){
           write.csv(out, 
                     file = naming1, 
+                    row.names = F, quote = F)
+        }
+      }
+    }
+    
+    if (write.file){
+      naming.log<-paste0(summary.dir, summary.file.root,  "_log.csv")
+      if (file.exists(naming.log) == F){
+        write.csv(smart.log, 
+                  file = naming.log, 
+                  row.names = F, quote = F)
+      } else {
+        if (over.write.data == T){
+          write.csv(smart.log, 
+                    file = naming.log, 
                     row.names = F, quote = F)
         }
       }
