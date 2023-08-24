@@ -8,14 +8,17 @@
 rm(list=ls())
 source("readGPX_with_laser_fcn.R")
 #in.dir <- "data/Gray whale PB 2022"
-#in.dir <- "data/Leatherback_HMB_2021 - Copy"
+#in.dir <- "data/Leatherback_2021"
+#in.dir <- "data/Leatherback_HMB_2021"
 #in.dir <- "data/Leatherback_HMB_2022"
 #in.dir <- "data/Agua Hedionda/"
 #in.dir <- "data/Piedras Blancas/Flight data/"
 #in.dir <- "data/Jamul training/"
 #in.dir <- "data/San Diego Bay training/"
 #in.dir <- "data/San Diego Coastal Cetacean/APH-28 Goliath/"
-in.dir <- "data/San Diego Coastal Cetacean/APH-22 Ruffian/"
+#in.dir <- "data/San Diego Coastal Cetacean/APH-22 Ruffian/"
+#in.dir <- "data/San Diego Bay Green Turtles/LOG - Mavrick/"
+in.dir <- "data/San Diego Bay Green Turtles/LOG - Poppins/"
 
 output <- readGPX_v3(in.dir, 
                      write.file = T, 

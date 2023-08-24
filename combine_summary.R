@@ -10,9 +10,10 @@
 rm(list=ls())
 library(tidyverse)
 
+#data.dir <- "data/Leatherback_2021/"
 #data.dir <- "data/Leatherback_HMB_2022/"
-#data.dir <- "data/Gray whale PB 2022"
-data.dir <- "data/Jamul training/20230418_APH28R"
+data.dir <- "data/Piedras Blancas"
+#data.dir <- "data/Jamul training/20230418_APH28R"
 
 idx.slash.max <- str_locate_all(pattern = "/", data.dir) %>% unlist() %>% max()
 
@@ -41,7 +42,7 @@ cols <- readr::cols(ID = col_character(),
 
 summary.file <- list() 
 for (k in 1:length(summary.dirs)){
-  fname <- list.files(path = summary.dirs[k])
+  fname <- list.files(path = summary.dirs[k], pattern = "SUMMARY.csv")
   summary.file[[k]] <- readr::read_csv(paste0(summary.dirs[k], "/", fname),
                                      col_types = cols)
       
