@@ -10,9 +10,13 @@ library(tidyverse)
 library(lubridate)
 library(ggplot2)
 
-filename <- "data/Gray Whale Photogrammetry/Logs/20240108_F01_Leia/20240108_F01.csv"
-load.log <- function(filename){
-  dat.0 <- read.csv(file = filename) %>%
+dirname <- "data/Gray Whale Photogrammetry/Logs/20240108_F01_Leia/"
+dirname <- "data/Gray Whale Photogrammetry/Logs/20240109_F02_Han Solo/"
+load.log <- function(dirname){
+  filename <- dir(path = dirname, pattern = ".csv")
+  if (length(filename) == 1){
+  
+  dat.0 <- read.csv(file = paste0(dirname, filename)) %>%
     select(CUSTOM.date..local., CUSTOM.updateTime..local.,
            OSD.flyTime..s., OSD.latitude, OSD.longitude,
            OSD.height..ft., OSD.altitude..ft., 
@@ -45,9 +49,10 @@ load.log <- function(filename){
               Battery_voltage = BATTERY.voltage..V.)
  
   return(dat.0) 
+  }
 }
 
-dat.0 <- load.log(filename)
+dat.0 <- load.log(dirname)
 
 ggplot(data = dat.0) +
   geom_path(aes(x = Longitude, y = Latitude, color = Altitude_ft)) +
