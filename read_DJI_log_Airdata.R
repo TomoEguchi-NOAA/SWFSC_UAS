@@ -61,9 +61,9 @@ load.log <- function(dirname){
     k1 <- 2
   }
   
-  header <- lapply(header, FUN = str_replace_all, "\\[", "_") %>% 
-    unlist() %>%
-    lapply(FUN = str_replace_all, "\\]", "_") 
+  #header <- lapply(header, FUN = str_replace_all, "\\[", "_") %>% 
+   # unlist() %>%
+    #lapply(FUN = str_replace_all, "\\]", "_") 
   
   data.list <- lapply(all.lines[k1:length(all.lines)], 
                       FUN = function(x) str_split(x, ",") %>% unlist())
@@ -71,36 +71,39 @@ load.log <- function(dirname){
   data.df <- do.call("rbind", data.list) %>% as.data.frame()
   colnames(data.df) <- header
   
-  data.df %>% filter(as.numeric(OSD.gpsNum) > 15) -> data.df
+  data.df %>% filter(as.numeric(satellites) > 15) -> data.df
   
   data.df %>%
     dplyr::select(contains(c("date", "time", "latitude", "longitude", "height",
-                             "altitude", "speed", "pitch", "roll", "yaw",
-                             "gps", "drone", "battery", "mileage",
+                             "altitude", "speed", "distance", "satellites", "gpslevel",
+                             "pitch", "roll", "heading",
+                             "rc", "battery", "mileage",
+                             "gimbal",
                              "direction"))) %>%
-    dplyr::select(!contains(c(".is", ".goHome", ".low", ".serious"))) %>%
-    transmute(Date.local = as.Date(`CUSTOM.date _local_`, format = "%m/%d/%Y"),
-              Time.local = `CUSTOM.updateTime _local_`,
+    #dplyr::select(!contains(c(".is", ".goHome", ".low", ".serious"))) %>%
+    transmute(Date.UTC = ymd_hms(`datetime(utc)`),
+              Date.local = with_tz(Date.UTC, tzone = "America/Los_Angeles"),
+              #Time.local = `CUSTOM.updateTime _local_`,
               #Time.local.HMS = DJI.time.conv(Time.local),
-              Flight.time_s = as.numeric(`OSD.flyTime _s_`),
-              Latitude = as.numeric(OSD.latitude),
-              Longitude = as.numeric(OSD.longitude),
-              Height_ft = as.numeric(`OSD.height _ft_`),
-              Altitude_ft = as.numeric(`OSD.altitude _ft_`),
-              Distance_ft = as.numeric(`OSD.mileage _ft_`),
-              Horiz.Speed_MPH = as.numeric(`OSD.hSpeed _MPH_`),
-              Pitch = as.numeric(OSD.pitch),
-              Roll = as.numeric(OSD.roll),
-              Yaw = as.numeric(OSD.yaw),
-              Direction = as.numeric(OSD.directionOfTravel),
-              Num.GPS = as.numeric(OSD.gpsNum),
-              Level_GPS = as.numeric(OSD.gpsLevel),
-              Drone = OSD.droneType,
-              Gimbal.Pitch = as.numeric(GIMBAL.pitch),
-              Gimbal.Roll = as.numeric(GIMBAL.roll),
-              Gimbal.Yaw = as.numeric(GIMBAL.yaw),
-              Battery.Level = as.numeric(BATTERY.chargeLevel),
-              Battery.voltage = as.numeric(`BATTERY.voltage _V_`)) -> dat.0
+              Flight.time_s = as.numeric(`time(millisecond)`) / 1000,
+              Latitude = as.numeric(latitude),
+              Longitude = as.numeric(longitude),
+              #Height_ft = as.numeric(`OSD.height _ft_`),
+              Altitude_ft = as.numeric(`altitude_above_seaLevel(feet)`),
+              Distance_ft = as.numeric(`distance(feet)`),
+              Horiz.Speed_MPH = as.numeric(`speed(mph)`),
+              Pitch = as.numeric(` pitch(degrees)`),
+              Roll = as.numeric(` roll(degrees)`),
+              #Yaw = as.numeric(OSD.yaw),
+              Direction = as.numeric(` compass_heading(degrees)`),
+              Num.GPS = as.numeric(satellites),
+              Level_GPS = as.numeric(gpslevel),
+              #Drone = OSD.droneType,
+              Gimbal.Pitch = as.numeric(`gimbal_pitch(degrees)`),
+              Gimbal.Roll = as.numeric(`gimbal_roll(degrees)`),
+              #Gimbal.Yaw = as.numeric(GIMBAL.yaw),
+              Battery.Level = as.numeric(battery_percent)) -> dat.0
+              #Battery.voltage = as.numeric(`BATTERY.voltage _V_`)) -> dat.0
  
    
   #dat.0 <- load.log(dirname)
@@ -147,11 +150,11 @@ load.log <- function(dirname){
 }
 
 #dir.root <- "data/Gray Whale Photogrammetry/Logs/"
-dir.root <- "data/San Diego Bay Green Turtles/20240501"
-dir.names <- dir(dir.root, recursive = TRUE)
+dir.root <- "data/San Diego Bay Green Turtles/20240501/"
+dir.names <- dir(dir.root, recursive = F)
 
 #dirs <- paste0(dir.root, dir.names[grep(pattern = "_Han", dir.names)])
-dirs <- paste0(dir.root, "/", dir.names[grep(dir.names, pattern = ".csv")])
+dirs <- paste0(dir.root, "/", dir.names)
 
 summary.list <- lapply(dirs, FUN = load.log)
 
