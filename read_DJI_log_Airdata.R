@@ -121,19 +121,30 @@ load.log <- function(dirname){
   # }
   
   dirname.parts <- strsplit(dirname, "/") %>% unlist()
-  summary.df <- data.frame(ID = dirname.parts[length(dirname.parts)],
-                           Start.Local = ymd_hms(paste(dat.0$Date.local[1], dat.0$Time.local[1]), 
-                                                 tz = "America/Los_Angeles"),
-                           End.Local = ymd_hms(paste(dat.0$Date.local[nrow(dat.0)], dat.0$Time.local[nrow(dat.0)]),
-                                               tz = "America/Los_Angeles"),
-                           Start.Lat = dat.0$Latitude[1],
-                           Start.Lon = dat.0$Longitude[1],
-                           Duration_s = dat.0$Flight.time_s[nrow(dat.0)],
-                           Max.elevation_m = max(dat.0$Altitude_ft) * 0.3048,
-                           Max.Distance_m = max(dat.0$Distance.from.Loc1_m),
-                           Total.Distance_m = max(dat.0$Distance_ft) * 0.3048,
-                           Max.vel_ms = max(dat.0$Horiz.Speed_MPH, na.rm = T) * 0.44704,
-                           Mean.vel_ms = mean(dat.0$Horiz.Speed_MPH, na.rm = T) * 0.44704)
+  summary.df <- data.frame(Takeoff.Local = dat.0$Date.local[1],
+                           UAS = NA,
+                           VTOL_time = dat.0$Flight.time_s[nrow(dat.0)]/60,
+                           Total_time = dat.0$Flight.time_s[nrow(dat.0)]/3600,
+                           Landings = 1,
+                           Pilot = NA,
+                           Latitude = dat.0$Longitude[1],
+                           Longitude = dat.0$Longitude[1],
+                           Mission_Type = NA,
+                           Issues = NA,
+                           COA = NA,
+                           Project = NA,
+                           Event = NA,
+                           Project_Tyhpe = NA,
+                           Data_Product = NA,
+                           VO = NA,
+                           Remarks = NA)
+  
+                           # Duration_s = dat.0$Flight.time_s[nrow(dat.0)],
+                           # Max.elevation_m = max(dat.0$Altitude_ft) * 0.3048,
+                           # Max.Distance_m = max(dat.0$Distance.from.Loc1_m),
+                           # Total.Distance_m = max(dat.0$Distance_ft) * 0.3048,
+                           # Max.vel_ms = max(dat.0$Horiz.Speed_MPH, na.rm = T) * 0.44704,
+                           # Mean.vel_ms = mean(dat.0$Horiz.Speed_MPH, na.rm = T) * 0.44704)
   
   # ggplot(data = dat.0) +
   #   geom_path(aes(x = Longitude, y = Latitude, color = Altitude_ft)) +
@@ -159,5 +170,7 @@ dirs <- paste0(dir.root, "/", dir.names)
 summary.list <- lapply(dirs, FUN = load.log)
 
 summary.all <- lapply(summary.list, FUN = function(x) x$summary) 
-summary.df <- do.call("rbind", summary.all) %>%
-  mutate(Duration_min = Duration_s/60)
+
+summary.df <- do.call("rbind", summary.all)
+# summary.df <- do.call("rbind", summary.all) %>%
+#   mutate(Duration_min = Duration_s/60)
