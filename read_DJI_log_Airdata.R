@@ -1,5 +1,6 @@
 #read_DJI_log.R
-#Reads DJI log file.
+#Reads DJI log files that were created by Airdata. This new application was used
+#since May 2024.
 #
 # Tomo Eguchi
 # 2024-03-04
@@ -11,40 +12,10 @@ library(tidyverse)
 library(lubridate)
 library(ggplot2)
 
-# This script is designed for date and time recorded in local time (America/Los_Angeles).
-# It needs to be changed when the date/time are recorded in GMT (or UTC)
+# This script is designed for date and time recorded in UTC.
 
-# Leia and Han Solo have different output format
-#dirname <- "data/Gray Whale Photogrammetry/Logs/20240108_F01_Leia/"
-#dirname <- "data/Gray Whale Photogrammetry/Logs/20240109_F02_Han Solo/"
-
-# a function to convert DJI system time
-# DJI.time.conv <- function(x){
-#   x1 <- strsplit(x, ":") %>% unlist() %>% as.numeric()
-#   
-#   if (x1[1] < 10){
-#     x1.hr <- paste0("0", x1[1])
-#   } else {
-#     x1.hr <- x1[1]
-#   }
-#   
-#   x1.min <- floor(x1[2])
-#   if (x1.min < 10){
-#     x1.min <- paste0("0", x1.min)
-#   } 
-#   
-#   x1.sec <- round((x1[2] - floor(x1[2])) * 60)
-#   if (x1.sec == 60){
-#     x1.sec <- "00"
-#     x1[2] <- x1[2] + 1
-#   }
-#   if (is.numeric(x1.sec) & x1.sec < 10){
-#     x1.sec <- paste0("0", x1.sec)
-#   }
-#   
-#   x2 <- paste0(x1.hr, ":", x1.min, ":", x1.sec)
-#   return(x2)
-# }
+#dir.root <- "data/Gray Whale Photogrammetry/Logs/"
+dir.root <- "data/San Diego Bay Green Turtles/20240509/"
 
 load.log <- function(dirname){
   filename <- dir(path = dirname, pattern = ".csv")
@@ -66,7 +37,10 @@ load.log <- function(dirname){
     #lapply(FUN = str_replace_all, "\\]", "_") 
   
   data.list <- lapply(all.lines[k1:length(all.lines)], 
-                      FUN = function(x) str_split(x, ",") %>% unlist())
+                      FUN = function(x) {
+                        tmp <- str_split(x, ",") %>% unlist()
+                        return(tmp[1:length(header)])
+                      })
 
   data.df <- do.call("rbind", data.list) %>% as.data.frame()
   colnames(data.df) <- header
@@ -160,8 +134,6 @@ load.log <- function(dirname){
   return(out.list) 
 }
 
-#dir.root <- "data/Gray Whale Photogrammetry/Logs/"
-dir.root <- "data/San Diego Bay Green Turtles/20240501/"
 dir.names <- dir(dir.root, recursive = F)
 
 #dirs <- paste0(dir.root, dir.names[grep(pattern = "_Han", dir.names)])
@@ -174,3 +146,7 @@ summary.all <- lapply(summary.list, FUN = function(x) x$summary)
 summary.df <- do.call("rbind", summary.all)
 # summary.df <- do.call("rbind", summary.all) %>%
 #   mutate(Duration_min = Duration_s/60)
+
+write.csv(summary.df, 
+          file = paste0(dir.root, "flight_summary.csv"))
+
