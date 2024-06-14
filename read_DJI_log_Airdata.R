@@ -16,7 +16,7 @@ library(ggplot2)
 
 #dir.root <- "data/Gray Whale Photogrammetry/Logs/"
 #dir.root <- "data/San Diego Bay Green Turtles/20240509/"
-dir.root <- "data/San Diego Coastal Cetacean/20240605/"
+dir.root <- "data/San Diego Coastal Cetacean/20240612/"
 
 load.log <- function(dirname){
   filename <- dir(path = dirname, pattern = ".csv")
@@ -148,6 +148,11 @@ summary.df <- do.call("rbind", summary.all)
 # summary.df <- do.call("rbind", summary.all) %>%
 #   mutate(Duration_min = Duration_s/60)
 
+# find the directory name (Date) and use it as part of the output filename
+tmp.1 <- str_split(dir.root, "/") %>% unlist()
+tmp.2 <- tmp.1[str_count(tmp.1) > 0]
+#tmp.2[length(tmp.2)]
+
 write.csv(summary.df, 
-          file = paste0(dir.root, "flight_summary.csv"))
+          file = paste0(dir.root, "flight_summary_", tmp.2[length(tmp.2)], ".csv"))
 
