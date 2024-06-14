@@ -15,7 +15,8 @@ library(ggplot2)
 # This script is designed for date and time recorded in UTC.
 
 #dir.root <- "data/Gray Whale Photogrammetry/Logs/"
-dir.root <- "data/San Diego Bay Green Turtles/20240509/"
+#dir.root <- "data/San Diego Bay Green Turtles/20240509/"
+dir.root <- "data/San Diego Coastal Cetacean/20240605/"
 
 load.log <- function(dirname){
   filename <- dir(path = dirname, pattern = ".csv")
@@ -135,8 +136,8 @@ load.log <- function(dirname){
 }
 
 dir.names <- dir(dir.root, recursive = F)
-
-#dirs <- paste0(dir.root, dir.names[grep(pattern = "_Han", dir.names)])
+# 
+# #dirs <- paste0(dir.root, dir.names[grep(pattern = "_Han", dir.names)])
 dirs <- paste0(dir.root, "/", dir.names)
 
 summary.list <- lapply(dirs, FUN = load.log)
