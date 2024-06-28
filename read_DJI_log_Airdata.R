@@ -16,9 +16,30 @@ library(ggplot2)
 
 #dir.root <- "data/Gray Whale Photogrammetry/Logs/"
 #dir.root <- "data/San Diego Bay Green Turtles/20240509/"
-dir.root <- "data/San Diego Coastal Cetacean/20240612/"
+#dir.root <- "data/San Diego Coastal Cetacean/20240612/"
+dir.root <- "data/Ruben Lasker Trawl/20240627/"
 
 load.log <- function(dirname){
+
+  # get the FAA registration code for all UAS in the inventory:
+  reg.numbers <- readxl::read_excel(path = "data/UAS Inventory.xlsx")
+  
+  dir.name.parts <- strsplit(dirname, "_") %>% unlist()
+  nick.name <- dir.name.parts[length(dir.name.parts)]
+  
+  FAA.ID <- reg.numbers %>% filter(Nickname == nick.name) %>% 
+    select(`FAA Registration #`) %>%
+    pull()
+  
+  # project name
+  root.name.parts <- strsplit(dir.root, "/") %>% unlist()
+  dir.name <- root.name.parts[2]
+  proj.names <- readxl::read_excel(path = "data/Project list.xlsx")
+  proj <- proj.names %>%
+    filter(Directory == dir.name) %>%
+    select(Project) %>%
+    pull()
+  
   filename <- dir(path = dirname, pattern = ".csv")
   #if (length(filename) == 1){
   
@@ -96,21 +117,21 @@ load.log <- function(dirname){
   # }
   
   dirname.parts <- strsplit(dirname, "/") %>% unlist()
-  summary.df <- data.frame(Takeoff.Local = dat.0$Date.local[1],
-                           UAS = NA,
-                           VTOL_time = dat.0$Flight.time_s[nrow(dat.0)]/60,
-                           Total_time = dat.0$Flight.time_s[nrow(dat.0)]/3600,
+  summary.df <- data.frame(Takeoff.Local = ymd_hms(dat.0$Date.local[1]),
+                           UAS = FAA.ID,
+                           VTOL_time = signif(dat.0$Flight.time_s[nrow(dat.0)]/60, 3),
+                           Total_time = signif(dat.0$Flight.time_s[nrow(dat.0)]/3600, 3),
                            Landings = 1,
                            Pilot = NA,
-                           Latitude = dat.0$Longitude[1],
-                           Longitude = dat.0$Longitude[1],
-                           Mission_Type = NA,
+                           Latitude = signif(dat.0$Latitude[1], 4),
+                           Longitude = signif(dat.0$Longitude[1], 5),
+                           Mission_Type = "Research",
                            Issues = NA,
                            COA = NA,
-                           Project = NA,
+                           Project = proj,
                            Event = NA,
-                           Project_Tyhpe = NA,
-                           Data_Product = NA,
+                           Project_Type = NA,
+                           Data_Product = "Video",
                            VO = NA,
                            Remarks = NA)
   
@@ -144,7 +165,9 @@ summary.list <- lapply(dirs, FUN = load.log)
 
 summary.all <- lapply(summary.list, FUN = function(x) x$summary) 
 
-summary.df <- do.call("rbind", summary.all)
+summary.df <- do.call("rbind", summary.all) %>%
+  arrange(Takeoff.Local)
+
 # summary.df <- do.call("rbind", summary.all) %>%
 #   mutate(Duration_min = Duration_s/60)
 
@@ -153,6 +176,6 @@ tmp.1 <- str_split(dir.root, "/") %>% unlist()
 tmp.2 <- tmp.1[str_count(tmp.1) > 0]
 #tmp.2[length(tmp.2)]
 
-write.csv(summary.df, 
+write.csv(summary.df,
           file = paste0(dir.root, "flight_summary_", tmp.2[length(tmp.2)], ".csv"))
 
