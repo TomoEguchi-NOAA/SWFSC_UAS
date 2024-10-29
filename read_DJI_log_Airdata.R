@@ -11,13 +11,15 @@ library(readr)
 library(tidyverse)
 library(lubridate)
 library(ggplot2)
+library(exifr)  # for getting exif data from images
 
 # This script is designed for date and time recorded in UTC.
 
 #dir.root <- "data/Gray Whale Photogrammetry/Logs/"
 #dir.root <- "data/San Diego Bay Green Turtles/20240509/"
 #dir.root <- "data/San Diego Coastal Cetacean/20240612/"
-dir.root <- "data/Ruben Lasker Trawl/20240627/"
+#dir.root <- "data/Ruben Lasker Trawl/20240627/"
+dir.root <- "data/Gray Whale Photogrammetry/Logs/20240108_F01_Leia/"
 
 load.log <- function(dirname){
 
@@ -40,7 +42,7 @@ load.log <- function(dirname){
     select(Project) %>%
     pull()
   
-  filename <- dir(path = dirname, pattern = ".csv")
+  filename <- dir(path = dirname, pattern = "Airdata.csv")
   #if (length(filename) == 1){
   
   all.lines <- read_lines(file = paste0(dirname, "/", filename))
@@ -74,8 +76,8 @@ load.log <- function(dirname){
                              "altitude", "speed", "distance", "satellites", "gpslevel",
                              "pitch", "roll", "heading",
                              "rc", "battery", "mileage",
-                             "gimbal",
-                             "direction"))) %>%
+                             "gimbal", "elevation",
+                             "direction", "Photo", "Video"))) %>%
     #dplyr::select(!contains(c(".is", ".goHome", ".low", ".serious"))) %>%
     transmute(Date.UTC = ymd_hms(`datetime(utc)`),
               Date.local = with_tz(Date.UTC, tzone = "America/Los_Angeles"),
@@ -84,7 +86,9 @@ load.log <- function(dirname){
               Flight.time_s = as.numeric(`time(millisecond)`) / 1000,
               Latitude = as.numeric(latitude),
               Longitude = as.numeric(longitude),
-              #Height_ft = as.numeric(`OSD.height _ft_`),
+              Height_ft = as.numeric(`height_above_takeoff(feet)`),
+              Height_AG_ft = as.numeric(`height_above_ground_at_drone_location(feet)`),
+              Elevation_ft = as.numeric(`ground_elevation_at_drone_location(feet)`),
               Altitude_ft = as.numeric(`altitude_above_seaLevel(feet)`),
               Distance_ft = as.numeric(`distance(feet)`),
               Horiz.Speed_MPH = as.numeric(`speed(mph)`),
@@ -98,7 +102,9 @@ load.log <- function(dirname){
               Gimbal.Pitch = as.numeric(`gimbal_pitch(degrees)`),
               Gimbal.Roll = as.numeric(`gimbal_roll(degrees)`),
               #Gimbal.Yaw = as.numeric(GIMBAL.yaw),
-              Battery.Level = as.numeric(battery_percent)) -> dat.0
+              Battery.Level = as.numeric(battery_percent),
+              isPhoto = as.numeric(isPhoto),
+              isVideo = as.numeric(isVideo)) -> dat.0
               #Battery.voltage = as.numeric(`BATTERY.voltage _V_`)) -> dat.0
  
    
