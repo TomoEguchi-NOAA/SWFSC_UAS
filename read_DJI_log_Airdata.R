@@ -13,14 +13,16 @@ library(lubridate)
 library(ggplot2)
 library(exifr)  # for getting exif data from images
 
+library(XML)
+
 # This script is designed for date and time recorded in UTC.
 
 #dir.root <- "data/Gray Whale Photogrammetry/Logs/"
 #dir.root <- "data/San Diego Bay Green Turtles/20240509/"
 #dir.root <- "data/San Diego Coastal Cetacean/20240612/"
 #dir.root <- "data/Ruben Lasker Trawl/20240627/"
-dir.root <- "data/Gray Whale Photogrammetry/Logs/20240108_F01_Leia/"
-
+#dir.root <- "data/Gray Whale Photogrammetry/Logs/" #20240108_F01_Leia/"
+dir.root <- "data/Channel Islands Gray Whales/"
 load.log <- function(dirname){
 
   # get the FAA registration code for all UAS in the inventory:
@@ -43,33 +45,44 @@ load.log <- function(dirname){
     pull()
   
   filename <- dir(path = dirname, pattern = "Airdata.csv")
-  #if (length(filename) == 1){
-  
-  all.lines <- read_lines(file = paste0(dirname, "/", filename))
-  
-  if (all.lines[1] == "sep=,"){
-    header <- str_split(all.lines[2], ",") %>% unlist()
+  # if multiple files - multiple landing - combine them together
+  k <- 1
+  data.df.list <- header <- list()
+  for (k in 1:length(filename)){
+    all.lines <- read_lines(file = paste0(dirname, "/",
+                                          filename[k]))
     
-    k1 <- 3
-  } else {
-    header <- str_split(all.lines[1], ",") %>% unlist()
-    k1 <- 2
-  }
-  
-  #header <- lapply(header, FUN = str_replace_all, "\\[", "_") %>% 
-   # unlist() %>%
+    if (all.lines[1] == "sep=,"){
+      header[[k]] <- str_split(all.lines[2], ",") %>% unlist()
+      
+      k1 <- 3
+    } else {
+      header[[k]] <- str_split(all.lines[1], ",") %>% unlist()
+      k1 <- 2
+    }
+    
+    #header <- lapply(header, FUN = str_replace_all, "\\[", "_") %>% 
+    # unlist() %>%
     #lapply(FUN = str_replace_all, "\\]", "_") 
-  
-  data.list <- lapply(all.lines[k1:length(all.lines)], 
-                      FUN = function(x) {
-                        tmp <- str_split(x, ",") %>% unlist()
-                        return(tmp[1:length(header)])
-                      })
+    
+    data.list <- lapply(all.lines[k1:length(all.lines)], 
+                        FUN = function(x) {
+                          tmp <- str_split(x, ",") %>% 
+                            unlist()
+                          return(tmp[1:length(header[[k]])])
+                        })
+    
+    data.df.list[[k]] <- do.call("rbind", data.list) %>% 
+      as.data.frame()
+    
+  }
 
-  data.df <- do.call("rbind", data.list) %>% as.data.frame()
-  colnames(data.df) <- header
+  data.df <- do.call(rbind, data.df.list)
   
-  data.df %>% filter(as.numeric(satellites) > 15) -> data.df
+  colnames(data.df) <- header[[1]]
+  
+  data.df %>% 
+    filter(as.numeric(satellites) > 15) -> data.df
   
   data.df %>%
     dplyr::select(contains(c("date", "time", "latitude", "longitude", "height",
@@ -104,7 +117,8 @@ load.log <- function(dirname){
               #Gimbal.Yaw = as.numeric(GIMBAL.yaw),
               Battery.Level = as.numeric(battery_percent),
               isPhoto = as.numeric(isPhoto),
-              isVideo = as.numeric(isVideo)) -> dat.0
+              isVideo = as.numeric(isVideo)) %>%
+    filter(!is.na(Date.local)) -> dat.0
               #Battery.voltage = as.numeric(`BATTERY.voltage _V_`)) -> dat.0
  
    
@@ -125,9 +139,9 @@ load.log <- function(dirname){
   dirname.parts <- strsplit(dirname, "/") %>% unlist()
   summary.df <- data.frame(Takeoff.Local = ymd_hms(dat.0$Date.local[1]),
                            UAS = FAA.ID,
-                           VTOL_time = signif(dat.0$Flight.time_s[nrow(dat.0)]/60, 3),
-                           Total_time = signif(dat.0$Flight.time_s[nrow(dat.0)]/3600, 3),
-                           Landings = 1,
+                           VTOL_time_min = signif(dat.0$Flight.time_s[nrow(dat.0)]/60, 3),
+                           Total_time_hr = signif(dat.0$Flight.time_s[nrow(dat.0)]/3600, 3),
+                           Landings = length(filename),
                            Pilot = NA,
                            Latitude = signif(dat.0$Latitude[1], 4),
                            Longitude = signif(dat.0$Longitude[1], 5),
@@ -137,7 +151,7 @@ load.log <- function(dirname){
                            Project = proj,
                            Event = NA,
                            Project_Type = NA,
-                           Data_Product = "Video",
+                           Data_Product = "Photo/Video",
                            VO = NA,
                            Remarks = NA)
   
@@ -162,10 +176,10 @@ load.log <- function(dirname){
   return(out.list) 
 }
 
-dir.names <- dir(dir.root, recursive = F)
+dirs <- list.dirs(dir.root, recursive = F)
 # 
 # #dirs <- paste0(dir.root, dir.names[grep(pattern = "_Han", dir.names)])
-dirs <- paste0(dir.root, "/", dir.names)
+#dirs <- paste0(dir.root, "/", dir.names)
 
 summary.list <- lapply(dirs, FUN = load.log)
 
@@ -183,5 +197,6 @@ tmp.2 <- tmp.1[str_count(tmp.1) > 0]
 #tmp.2[length(tmp.2)]
 
 write.csv(summary.df,
-          file = paste0(dir.root, "flight_summary_", tmp.2[length(tmp.2)], ".csv"))
+          file = paste0(dir.root, "flight_summary_", 
+                        tmp.2[length(tmp.2)], ".csv"))
 
